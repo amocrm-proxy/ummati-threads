@@ -29,10 +29,17 @@ def threads(method, path, **params):
 def upload_to_repo(path, raw):
     url = f"https://api.github.com/repos/{REPO}/contents/{path}"
     hdr = {"Authorization": f"Bearer {GH_TOKEN}", "Accept": "application/vnd.github+json"}
-    body = json.dumps({"message": f"card {path}", "content": base64.b64encode(raw).decode()}).encode()
-    http("PUT", url, data=body, headers=hdr)
+    payload = {"message": f"card {path}", "content": base64.b64encode(raw).decode()}
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers=hdr), timeout=30) as r:
+            payload["sha"] = json.load(r)["sha"]
+    except urllib.error.HTTPError:
+        pass
+    http("PUT", url, data=json.dumps(payload).encode(), headers=hdr)
 
 slot = os.environ.get("SLOT") or datetime.datetime.now(ZoneInfo("Asia/Almaty")).strftime("%Y-%m-%dT%H:00")
+dry = slot.startswith("dry:")
+slot = slot[4:] if dry else slot
 schedule = json.load(open("schedule.json", encoding="utf-8"))
 post = schedule.get(slot)
 if not post:
@@ -53,6 +60,9 @@ else:
     time.sleep(5)
 
 image_url = f"https://raw.githubusercontent.com/{REPO}/main/{urllib.parse.quote(image_path)}"
+if dry:
+    print("DRY", image_url)
+    sys.exit(0)
 text = post.get("text") or post.get("explain", "")
 user_id = threads("GET", "me", fields="id")["id"]
 container = threads("POST", f"{user_id}/threads", media_type="IMAGE", image_url=image_url, text=text)
