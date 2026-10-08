@@ -94,6 +94,7 @@ slot = os.environ.get("SLOT") or datetime.datetime.now(ZoneInfo("Asia/Almaty")).
 dry = slot.startswith("dry:")
 slot = slot[4:] if dry else slot
 hour = int(slot[11:13])
+subprocess.run([sys.executable, "ig.py"], env=dict(os.environ, SLOT=("dry:" if dry else "") + slot))
 schedule = json.load(open("schedule.json", encoding="utf-8"))
 post = schedule.get(slot)
 used = json.load(open("used.json", encoding="utf-8")) if os.path.exists("used.json") else {}
