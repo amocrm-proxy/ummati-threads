@@ -70,8 +70,8 @@ def display_quote(q, full):
             s += "…"
     elif s.endswith((",", ";", ":", "-", "—")):
         s = s.rstrip(" ,;:—-") + "…"
-    if not starts:
-        s = "…" + s
+    if not starts or s[:1].islower():
+        s = "…" + s.lstrip("…")
     out, depth = [], 0
     for ch in s:
         if ch == "«":
@@ -98,10 +98,10 @@ schedule = json.load(open("schedule.json", encoding="utf-8"))
 post = schedule.get(slot)
 used = json.load(open("used.json", encoding="utf-8")) if os.path.exists("used.json") else {}
 bank_ref = None
+if slot in used.values() and not dry:
+    print(f"{slot} уже опубликован"); sys.exit(0)
 
 if not post:
-    if slot in used.values() and not dry:
-        print(f"{slot} уже опубликован"); sys.exit(0)
     bank = json.load(open("bank.json", encoding="utf-8"))
     cat = category(hour)
     queue = [b for b in bank if b["ref"] not in used and b["t"] == cat] + \
@@ -143,7 +143,5 @@ container = threads("POST", f"{user_id}/threads", media_type="IMAGE", image_url=
 time.sleep(30)
 result = threads("POST", f"{user_id}/threads_publish", creation_id=container["id"])
 print(f"Опубликовано {slot}: {image_path} -> {result}")
-if bank_ref:
-    used[bank_ref] = slot
-if bank_ref or any(v == "skip" for v in used.values()):
-    put_file("used.json", json.dumps(used, ensure_ascii=False, indent=1).encode(), f"used {slot}")
+used[bank_ref or f"slot {slot}"] = slot
+put_file("used.json", json.dumps(used, ensure_ascii=False, indent=1).encode(), f"used {slot}")
