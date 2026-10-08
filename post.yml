@@ -1,0 +1,21 @@
+name: Threads autopost
+on:
+  schedule:
+    - cron: "5 * * * *"
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: "Слот для ручного теста, например 2026-10-09T13:00 (пусто = текущий час)"
+        required: false
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python post.py
+        env:
+          THREADS_TOKEN: ${{ secrets.THREADS_TOKEN }}
+          SLOT: ${{ github.event.inputs.slot }}
