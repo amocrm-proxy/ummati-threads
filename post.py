@@ -120,7 +120,18 @@ if not post:
         bank_ref = b["ref"]
         break
     if not post:
-        print("Банк аятов закончился — нужно пополнить bank.json"); sys.exit(0)
+        refs = {b["ref"] for b in bank}
+        for k in [k for k in used if k in refs]:
+            del used[k]
+        print("Банк аятов пройден — начинаю заново по кругу")
+        full = None
+        for b in [b for b in bank if b["t"] == cat] + [b for b in bank if b["t"] != cat]:
+            full = kuliev(b["ref"]); q = b.get("q") or (full or "")
+            if full and q in full and len(q) <= 260:
+                post = {"quote": display_quote(q, full), "source": f"Коран, {b['ref']}", "explain": b["x"]}
+                bank_ref = b["ref"]; break
+        if not post:
+            sys.exit("Не удалось подобрать аят")
 
 if post.get("image"):
     image_path = post["image"]
