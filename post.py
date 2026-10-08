@@ -28,7 +28,7 @@ if not post:
     sys.exit(0)
 
 user_id = call("GET", "me", fields="id")["id"]
-image_url = f"https://raw.githubusercontent.com/{REPO}/main/img/{urllib.parse.quote(post['image'])}"
+image_url = f"https://raw.githubusercontent.com/{REPO}/main/{urllib.parse.quote(post['image'])}"
 container = call("POST", f"{user_id}/threads", media_type="IMAGE", image_url=image_url, text=post.get("text", ""))
 time.sleep(30)
 result = call("POST", f"{user_id}/threads_publish", creation_id=container["id"])
