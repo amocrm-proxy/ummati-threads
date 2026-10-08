@@ -20,6 +20,6 @@ jobs:
       - run: python post.py
         env:
           THREADS_TOKEN: ${{ secrets.THREADS_TOKEN }}
-                    IG_TOKEN: ${{ secrets.IG_TOKEN }}
+          IG_TOKEN: ${{ secrets.IG_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLOT: ${{ github.event.inputs.slot }}
