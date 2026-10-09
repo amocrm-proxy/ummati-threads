@@ -6,10 +6,13 @@ import json, os, sys, urllib.request, urllib.parse, urllib.error
 
 def token():
     data = urllib.parse.urlencode({
-        "client_id": os.environ["YT_CLIENT_ID"], "client_secret": os.environ["YT_CLIENT_SECRET"],
-        "refresh_token": os.environ["YT_REFRESH_TOKEN"], "grant_type": "refresh_token"}).encode()
-    with urllib.request.urlopen("https://oauth2.googleapis.com/token", data=data, timeout=30) as r:
-        return json.load(r)["access_token"]
+        "client_id": os.environ["YT_CLIENT_ID"].strip(), "client_secret": os.environ["YT_CLIENT_SECRET"].strip(),
+        "refresh_token": os.environ["YT_REFRESH_TOKEN"].strip().strip('"'), "grant_type": "refresh_token"}).encode()
+    try:
+        with urllib.request.urlopen("https://oauth2.googleapis.com/token", data=data, timeout=30) as r:
+            return json.load(r)["access_token"]
+    except urllib.error.HTTPError as e:
+        sys.exit(f"Google не выдал доступ ({e.code}): {e.read().decode()[:300]}")
 
 def upload(path, title, desc, privacy="public", tags=None):
     tok = token()
