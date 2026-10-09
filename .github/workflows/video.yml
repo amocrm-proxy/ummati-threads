@@ -8,16 +8,28 @@ on:
       photo:
         description: "Фото для фона"
         default: "green_tex.jpg"
+      youtube:
+        description: "Загрузить на YouTube"
+        type: boolean
+        default: false
 permissions:
   contents: write
 jobs:
   video:
     runs-on: ubuntu-latest
+    env:
+      OUT: videos/${{ inputs.spec }}
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg libraqm0
       - run: pip install -q pillow
-      - run: mkdir -p videos && python video.py "${{ inputs.spec }}" "${{ inputs.photo }}" "videos/$(echo '${{ inputs.spec }}' | tr ':' '_').mp4"
+      - run: mkdir -p videos && python video.py "${{ inputs.spec }}" "${{ inputs.photo }}" "$(echo $OUT | tr ':' '_').mp4"
+      - if: ${{ inputs.youtube }}
+        run: python yt.py "$(echo $OUT | tr ':' '_').mp4"
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
       - run: |
           git config user.name "ummati-bot"
           git config user.email "bot@users.noreply.github.com"
