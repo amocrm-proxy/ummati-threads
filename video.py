@@ -13,6 +13,21 @@ ACC, FG, MUT = (233, 190, 140), (246, 240, 230), (226, 218, 204)
 HERE = os.path.dirname(os.path.abspath(__file__))
 AR_FONT = os.environ.get("AR_FONT", os.path.join(HERE, "fonts", "AmiriQuran.woff"))
 OFF = os.environ.get("OFFLINE")
+NAMES = ["Аль-Фатиха", "Аль-Бакара", "Али Имран", "Ан-Ниса", "Аль-Маида", "Аль-Анам", "Аль-Араф", "Аль-Анфаль", "Ат-Тауба", "Юнус", "Худ", "Юсуф", "Ар-Раад", "Ибрахим", "Аль-Хиджр", "Ан-Нахль", "Аль-Исра", "Аль-Кахф", "Марьям", "Та Ха", "Аль-Анбия", "Аль-Хадж", "Аль-Муминун", "Ан-Нур", "Аль-Фуркан", "Аш-Шуара", "Ан-Намль", "Аль-Касас", "Аль-Анкабут", "Ар-Рум", "Лукман", "Ас-Саджда", "Аль-Ахзаб", "Саба", "Фатыр", "Ясин", "Ас-Саффат", "Сад", "Аз-Зумар", "Гафир", "Фуссылят", "Аш-Шура", "Аз-Зухруф", "Ад-Духан", "Аль-Джасия", "Аль-Ахкаф", "Мухаммад", "Аль-Фатх", "Аль-Худжурат", "Каф", "Аз-Зарият", "Ат-Тур", "Ан-Наджм", "Аль-Камар", "Ар-Рахман", "Аль-Вакиа", "Аль-Хадид", "Аль-Муджадаля", "Аль-Хашр", "Аль-Мумтахана", "Ас-Сафф", "Аль-Джумуа", "Аль-Мунафикун", "Ат-Тагабун", "Ат-Талак", "Ат-Тахрим", "Аль-Мульк", "Аль-Калям", "Аль-Хакка", "Аль-Мааридж", "Нух", "Аль-Джинн", "Аль-Муззаммиль", "Аль-Муддассир", "Аль-Кияма", "Аль-Инсан", "Аль-Мурсалят", "Ан-Наба", "Ан-Назиат", "Абаса", "Ат-Таквир", "Аль-Инфитар", "Аль-Мутаффифин", "Аль-Иншикак", "Аль-Бурудж", "Ат-Тарик", "Аль-Аля", "Аль-Гашия", "Аль-Фаджр", "Аль-Балад", "Аш-Шамс", "Аль-Лейл", "Ад-Духа", "Аш-Шарх", "Ат-Тин", "Аль-Алак", "Аль-Кадр", "Аль-Баййина", "Аз-Зальзаля", "Аль-Адият", "Аль-Кариа", "Ат-Такасур", "Аль-Аср", "Аль-Хумаза", "Аль-Филь", "Курайш", "Аль-Маун", "Аль-Каусар", "Аль-Кафирун", "Ан-Наср", "Аль-Масад", "Аль-Ихлас", "Аль-Фаляк", "Ан-Нас"]
+# порядок Shorts: сначала короткие суры целиком, потом аяты из bank.json (целые, без обрезки)
+SURAS = ["112", "113", "114", "1", "103", "108", "110", "106", "105", "107", "111", "109", "102", "104", "95", "94", "97", "99", "100", "101", "2:255"]
+PHOTOS = ["green_tex.jpg", "brown_tex.jpg", "L1033130.jpg"]
+START = "2026-10-11"
+
+def auto_spec(day=None):
+    """Что выкладывать сегодня: по кругу SURAS + целые аяты из bank.json."""
+    import datetime
+    from zoneinfo import ZoneInfo
+    day = day or datetime.datetime.now(ZoneInfo("Asia/Almaty")).date()
+    d = (day - datetime.date.fromisoformat(START)).days
+    bank = [b["ref"] for b in json.load(open(os.path.join(HERE, "bank.json"), encoding="utf-8")) if not b.get("q")]
+    seq = SURAS + [r for r in bank if r not in SURAS]
+    return seq[d % len(seq)], PHOTOS[d % len(PHOTOS)]
 
 def ensure_ar_font():
     if os.path.exists(AR_FONT):
@@ -83,19 +98,36 @@ def orn(d, y, a=200):
     d.line([cx + 26, y, cx + 110, y], fill=(*ACC, a), width=2)
     d.polygon([(cx, y - 9), (cx + 9, y), (cx, y + 9), (cx - 9, y)], outline=(*ACC, 255))
 
+CMAP = None
+def clean_ar(t):
+    """Убираем символы, которых нет в шрифте (иначе на экране будут квадраты)."""
+    global CMAP
+    if CMAP is None:
+        try:
+            from fontTools.ttLib import TTFont
+            CMAP = set(TTFont(AR_FONT).getBestCmap())
+        except Exception:
+            CMAP = set()
+    return "".join(ch for ch in t if not CMAP or ch.isspace() or ord(ch) in CMAP)
+
 def ayah_layer(ar, ru, ref, idx, total):
     L = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(L)
-    n = len(ar)
-    fa = ImageFont.truetype(AR_FONT, 104 if n < 40 else 90 if n < 80 else 74 if n < 140 else 62,
-                            layout_engine=ImageFont.Layout.RAQM)
-    m = len(ru)
-    fr = R.font("CormorantGaramond_500Medium.ttf", 64 if m < 50 else 56 if m < 100 else 48 if m < 170 else 42)
+    ar = clean_ar(ar)
+    n, m = len(ar), len(ru)
+    sa = 104 if n < 40 else 90 if n < 80 else 74 if n < 140 else 62
+    sr = 64 if m < 50 else 56 if m < 100 else 48 if m < 170 else 42
     fs = R.font("Montserrat_600SemiBold.ttf", 24)
-    al = wrap(d, ar, fa, W - 180, rtl=True)
-    rl = wrap(d, ru, fr, W - 200)
-    alh, rlh = int(fa.size * 1.75), int(fr.size * 1.18)
-    block = len(al) * alh + 70 + len(rl) * rlh + 60 + 30
-    y = 980 - block // 2
+    for _ in range(10):                          # уменьшаем шрифт, пока текст не влезет между шапкой и точками
+        fa = ImageFont.truetype(AR_FONT, sa, layout_engine=ImageFont.Layout.RAQM)
+        fr = R.font("CormorantGaramond_500Medium.ttf", sr)
+        al = wrap(d, ar, fa, W - 180, rtl=True)
+        rl = wrap(d, ru, fr, W - 200)
+        alh, rlh = int(fa.size * (1.75 if len(al) < 3 else 1.6)), int(fr.size * 1.18)
+        block = len(al) * alh + 70 + len(rl) * rlh + 60 + 30
+        if block <= 1180:
+            break
+        sa, sr = int(sa * 0.9), max(30, int(sr * 0.92))
+    y = max(370, 990 - block // 2)
     for ln in al:
         d.text((W / 2, y + alh // 2), ln, font=fa, fill=(*ACC, 255), anchor="mm", direction="rtl"); y += alh
     y += 34; orn(d, y); y += 36
@@ -108,7 +140,7 @@ def ayah_layer(ar, ru, ref, idx, total):
         r, gap = 7, 30; x0 = W / 2 - gap * (total - 1) / 2
         for i in range(total):
             c = (*ACC, 255) if i == idx else (*FG, 70)
-            d.ellipse([x0 + i * gap - r, 1560 - r, x0 + i * gap + r, 1560 + r], fill=c)
+            d.ellipse([x0 + i * gap - r, 1640 - r, x0 + i * gap + r, 1640 + r], fill=c)
     return L
 
 def chrome_layer(title):
@@ -162,8 +194,7 @@ def build(spec, photo, out, offer=("Намазные коврики ummati", "А
     s, name, a, ar, ru, nums = load(spec)
     files, durs = audio(nums, work)
     intro, gap, outro, fade = 0.8, 0.5, 3.5, 0.35
-    names = {1: "Аль-Фатиха", 103: "Аль-Аср", 108: "Аль-Каусар", 112: "Аль-Ихлас", 113: "Аль-Фаляк", 114: "Ан-Нас"}
-    title = f"Сура «{names.get(s, name)}»"
+    title = f"Сура «{NAMES[s - 1]}»"
     # таймлайн: (начало, конец, слой)
     scenes, t = [], 0.0
     for i, (x, y, dur) in enumerate(zip(ar, ru, durs)):
@@ -217,4 +248,7 @@ if __name__ == "__main__":
     spec = sys.argv[1] if len(sys.argv) > 1 else "112"
     photo = sys.argv[2] if len(sys.argv) > 2 else "green_tex.jpg"
     out = sys.argv[3] if len(sys.argv) > 3 else "short.mp4"
+    if spec == "auto":
+        spec, photo = auto_spec()
+        print("Сегодня:", spec, photo)
     print("Готово:", out, f"{build(spec, photo, out):.1f} c")
