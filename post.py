@@ -98,6 +98,17 @@ subprocess.run([sys.executable, "ig.py"], env=dict(os.environ, SLOT=("dry:" if d
 schedule = json.load(open("schedule.json", encoding="utf-8"))
 post = schedule.get(slot)
 used = json.load(open("used.json", encoding="utf-8")) if os.path.exists("used.json") else {}
+yt_key = f"yt {slot[:10]}"
+if hour == 18 and not dry and yt_key not in used:   # YouTube Shorts: раз в день запускаем сборку и загрузку видео
+    try:
+        urllib.request.urlopen(urllib.request.Request(
+            f"https://api.github.com/repos/{REPO}/actions/workflows/video.yml/dispatches", method="POST", headers=GH_HDR,
+            data=json.dumps({"ref": "main", "inputs": {"spec": "auto", "youtube": "true"}}).encode()), timeout=30)
+        used[yt_key] = "yt"
+        put_file("used.json", json.dumps(used, ensure_ascii=False, indent=1).encode(), yt_key)
+        print("YouTube Shorts: сборка запущена")
+    except BaseException as e:
+        print("YouTube Shorts: не удалось запустить:", e)
 bank_ref = None
 if slot in used.values() and not dry:
     print(f"{slot} уже опубликован"); sys.exit(0)
