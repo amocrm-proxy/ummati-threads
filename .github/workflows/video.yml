@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       spec:
-        description: "Сура или аяты, например 112, 2:255, 103:1-3"
+        description: "Сура или аяты, например 112, 2:255, 103:1-3 (auto — по плану на сегодня)"
         default: "112"
       photo:
         description: "Фото для фона"
@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg libraqm0
-      - run: pip install -q pillow
+      - run: pip install -q pillow fonttools
       - run: mkdir -p videos && python video.py "${{ inputs.spec }}" "${{ inputs.photo }}" "$(echo $OUT | tr ':' '_').mp4"
       - if: ${{ inputs.youtube }}
         run: python yt.py "$(echo $OUT | tr ':' '_').mp4"
@@ -30,7 +30,8 @@ jobs:
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
-      - run: |
+      - if: ${{ inputs.spec != 'auto' }}
+        run: |
           git config user.name "ummati-bot"
           git config user.email "bot@users.noreply.github.com"
           git add videos
