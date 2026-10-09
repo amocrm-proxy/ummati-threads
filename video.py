@@ -1,20 +1,3 @@
-f = f"{s}" if len(ar) > 1 and a == 1 else f"{s}:{a}" + (f"-{a + len(ar) - 1}" if len(ar) > 1 else "")
-    meta = {"title": f"{title} — чтение и перевод смыслов #shorts" if len(ar) > 1 or a == 1 else f"Коран, {ref} — чтение и перевод смыслов #shorts",
-            "description": " ".join(ru) + f"\n\nКоран, {ref}. Перевод смыслов: Э. Кулиев. Чтец: Мишари Рашид аль-Афаси.\n\n"
-                           "Ummati — намазные коврики. Акция 1+1: 2 коврика за 9 900 ₸, вода Зам-Зам, тасбих и подарочная упаковка в комплекте. "
-                           "Instagram: @ummati.family\n\n#коран #ислам #намаз #сура #shorts"}
-    json.dump(meta, open(out.rsplit(".", 1)[0] + ".json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    return total
-
-def fade_l(layer, a):
-    r, g, b, al = layer.split()
-    return Image.merge("RGBA", (r, g, b, al.point(lambda v: int(v * a))))
-
-if __name__ == "__main__":
-    spec = sys.argv[1] if len(sys.argv) > 1 else "112"
-    photo = sys.argv[2] if len(sys.argv) > 2 else "green_tex.jpg"
-    out = sys.argv[3] if len(sys.argv) > 3 else "short.mp4"
-    print("Готово:", out, f"{build(spec, photo, out):.1f} c")
 """Вертикальное видео ummati (Shorts / Reels / TikTok): сура или аяты с чтением и переводом Кулиева.
 Запуск: python video.py 112            -> сура целиком
         python video.py 2:255          -> один аят
@@ -218,4 +201,20 @@ def build(spec, photo, out, offer=("Намазные коврики ummati", "А
             if al > 0: img.alpha_composite(lay if al >= 1 else fade_l(lay, al))
         enc.stdin.write(img.convert("RGB").tobytes())
     enc.stdin.close(); enc.wait()
-    re
+    ref = f"{s}" if len(ar) > 1 and a == 1 else f"{s}:{a}" + (f"-{a + len(ar) - 1}" if len(ar) > 1 else "")
+    meta = {"title": f"{title} — чтение и перевод смыслов #shorts" if len(ar) > 1 or a == 1 else f"Коран, {ref} — чтение и перевод смыслов #shorts",
+            "description": " ".join(ru) + f"\n\nКоран, {ref}. Перевод смыслов: Э. Кулиев. Чтец: Мишари Рашид аль-Афаси.\n\n"
+                           "Ummati — намазные коврики. Акция 1+1: 2 коврика за 9 900 ₸, вода Зам-Зам, тасбих и подарочная упаковка в комплекте. "
+                           "Instagram: @ummati.family\n\n#коран #ислам #намаз #сура #shorts"}
+    json.dump(meta, open(out.rsplit(".", 1)[0] + ".json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    return total
+
+def fade_l(layer, a):
+    r, g, b, al = layer.split()
+    return Image.merge("RGBA", (r, g, b, al.point(lambda v: int(v * a))))
+
+if __name__ == "__main__":
+    spec = sys.argv[1] if len(sys.argv) > 1 else "112"
+    photo = sys.argv[2] if len(sys.argv) > 2 else "green_tex.jpg"
+    out = sys.argv[3] if len(sys.argv) > 3 else "short.mp4"
+    print("Готово:", out, f"{build(spec, photo, out):.1f} c")
