@@ -39,7 +39,7 @@ def load(spec):
     ar = d["ar"][a - 1:b]
     if int(s) not in (1, 9) and a == 1:          # в тексте 1-го аята бывает басмала — убираем
         w = ar[0].split()
-        if len(w) > 4 and w[0].startswith("بِس") and "ٱلرَّحِيمِ" in w[3]:
+        if len(w) > 4 and w[0].startswith("بِس"):
             ar[0] = " ".join(w[4:])
     ru = [t.replace(" - ", " — ").strip() for t in d["ru"][a - 1:b]]
     return int(s), d["name"], a, ar, ru, d["num"][a - 1:b]
