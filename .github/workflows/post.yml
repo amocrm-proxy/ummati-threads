@@ -9,6 +9,7 @@ on:
         required: false
 permissions:
   contents: write
+  actions: write
 jobs:
   post:
     runs-on: ubuntu-latest
