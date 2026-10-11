@@ -1,7 +1,7 @@
 """Автопостинг ummati в Instagram. Запускается из post.py каждый час.
 1) Если в ig_schedule.json есть публикации на этот час — публикует их (готовые картинки).
 2) Иначе сам собирает и рисует публикацию по плану дня:
-   08 — сторис с аятом (банк bank.json, сверка с Кулиевым), 14 — сторис-факт,
+   08 — сторис: следующий аят Корана по порядку, 14 — сторис: следующий хадис (hadiths.json),
    19 — карусель (через день: аят / польза или товар), 21 — сторис-акция с фото.
    Все банки идут по кругу. SLOT=dry:... — нарисовать и загрузить без публикации."""
 import json, os, sys, io, time, datetime, subprocess, urllib.request, urllib.parse, urllib.error, base64
@@ -133,6 +133,8 @@ def next_ayah(used):
     return None
 
 # ---------- автогенерация ----------
+PENDING = {}                                     # указатели (аят/хадис), которые двигаем только после публикации
+
 def auto_item(slot, used):
     subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pillow"], check=True)
     import ig_render as R
@@ -143,13 +145,21 @@ def auto_item(slot, used):
     off = C["offer"]
     def offer(page=None):
         return R.text_slide("choc", off["kicker"], title=off["title"], body=off["body"], page=page, footer="Пишите в директ")
-    if h == 8:
-        a = next_ayah(used)
-        if not a: return None
-        return "story", [R.text_slide("cream", "Слова Всевышнего", quote=a[0], source=a[1], body=a[2], story=True)], ""
-    if h == 14:
-        t, b = C["facts"][d % len(C["facts"])]
-        return "story", [R.text_slide("emer", "Знаете ли вы?", title=t, body=b, story=True)], ""
+    if h == 8:                                   # аяты Корана по порядку (перевод Кулиева, длинный аят — несколько сторис)
+        import content
+        n = int(used.get("igq_next", 1))
+        got = content.ayah_cards((n - 1) % content.TOTAL_AYAHS + 1)
+        if not got: return None
+        PENDING["igq_next"] = n + 1
+        return "stories", [R.text_slide("cream", "Слова Всевышнего", quote=q, source=src, body=ex, story=True)
+                           for q, src, ex, _ in got[0]], ""
+    if h == 14:                                  # хадисы по порядку из hadiths.json
+        import content
+        H = content.hadiths(); k = int(used.get("igh_next", 0))
+        cards, _ = content.hadith_cards(H[k % len(H)])
+        PENDING["igh_next"] = k + 1
+        return "stories", [R.text_slide("emer", "Хадис", quote=q, source=src, body=ex, story=True)
+                           for q, src, ex, _ in cards], ""
     if h == 21:
         ph, t, b = C["promos"][d % len(C["promos"])]
         return "story", [R.photo_slide(P + ph, t, b, story=True, footer="Пишите в директ", kicker="ummati")], ""
@@ -217,9 +227,14 @@ def main():
     if dry:
         print("IG DRY:", kind, [url(p) for p in paths], "\n", caption); return
     try:
-        print("IG опубликовано:", slot, publish({"type": kind, "images": paths, "caption": caption}, tok))
+        if kind == "stories":
+            for p in paths:
+                print("IG сторис:", slot, publish({"type": "story", "images": [p]}, tok))
+        else:
+            print("IG опубликовано:", slot, publish({"type": kind, "images": paths, "caption": caption}, tok))
         for k, v in list(used.items()):
             if v == "?": used[k] = slot
+        used.update(PENDING)
         used[key] = slot; save_used(used, key)
     except Exception as e:
         print("IG ОШИБКА", slot, e)
