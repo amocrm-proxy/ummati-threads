@@ -8,7 +8,8 @@ API = "https://hadeethenc.com/api/v1"
 def get(url):
     for i in range(4):
         try:
-            with urllib.request.urlopen(url, timeout=60) as r:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36", "Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=60) as r:
                 return json.load(r)
         except Exception as e:
             print("повтор:", url, e); time.sleep(3 * (i + 1))
