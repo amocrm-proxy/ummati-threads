@@ -19,15 +19,20 @@ SURAS = ["112", "113", "114", "1", "103", "108", "110", "106", "105", "107", "11
 PHOTOS = ["green_tex.jpg", "brown_tex.jpg", "L1033130.jpg"]
 START = "2026-10-11"
 
-def auto_spec(day=None):
-    """Что выкладывать сегодня: по кругу SURAS + целые аяты из bank.json."""
+HOURS = [9, 12, 15, 18, 21]                     # 5 Shorts в день, время по Алматы
+
+def auto_spec(slot=None):
+    """Что выкладывать в этот слот (2026-10-11T12): по кругу SURAS + целые аяты из bank.json."""
     import datetime
     from zoneinfo import ZoneInfo
-    day = day or datetime.datetime.now(ZoneInfo("Asia/Almaty")).date()
-    d = (day - datetime.date.fromisoformat(START)).days
+    now = datetime.datetime.now(ZoneInfo("Asia/Almaty"))
+    day = datetime.date.fromisoformat(slot[:10]) if slot else now.date()
+    hour = int(slot[11:13]) if slot and len(slot) >= 13 else 18
+    k = HOURS.index(hour) if hour in HOURS else 0
+    n = (day - datetime.date.fromisoformat(START)).days * len(HOURS) + k
     bank = [b["ref"] for b in json.load(open(os.path.join(HERE, "bank.json"), encoding="utf-8")) if not b.get("q")]
     seq = SURAS + [r for r in bank if r not in SURAS]
-    return seq[d % len(seq)], PHOTOS[d % len(PHOTOS)]
+    return seq[n % len(seq)], PHOTOS[n % len(PHOTOS)]
 
 def ensure_ar_font():
     if os.path.exists(AR_FONT):
@@ -248,7 +253,7 @@ if __name__ == "__main__":
     spec = sys.argv[1] if len(sys.argv) > 1 else "112"
     photo = sys.argv[2] if len(sys.argv) > 2 else "green_tex.jpg"
     out = sys.argv[3] if len(sys.argv) > 3 else "short.mp4"
-    if spec == "auto":
-        spec, photo = auto_spec()
+    if spec.startswith("auto"):
+        spec, photo = auto_spec(spec[5:] or None)
         print("Сегодня:", spec, photo)
     print("Готово:", out, f"{build(spec, photo, out):.1f} c")
