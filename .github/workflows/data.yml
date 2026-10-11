@@ -1,0 +1,18 @@
+name: Build hadiths
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python build_hadiths.py
+      - run: |
+          git config user.name "ummati-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add hadiths.json
+          git commit -m "hadiths.json"
+          git pull --rebase -q
+          git push
