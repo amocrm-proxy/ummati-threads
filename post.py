@@ -110,62 +110,61 @@ if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # YouTube S
         print("YouTube Shorts: сборка запущена", inputs)
     except BaseException as e:
         print("YouTube Shorts: не удалось запустить:", e)
-bank_ref = None
 if slot in [v for k, v in used.items() if not k.startswith(("ig", "yt"))] and not dry:
     print(f"{slot} уже опубликован"); sys.exit(0)
 
-if not post:
-    bank = json.load(open("bank.json", encoding="utf-8"))
-    cat = category(hour)
-    queue = [b for b in bank if b["ref"] not in used and b["t"] == cat] + \
-            [b for b in bank if b["ref"] not in used and b["t"] != cat]
-    for b in queue:
-        full = kuliev(b["ref"])
-        if not full:
-            sys.exit("Не удалось получить перевод Кулиева — пропускаю час, ничего не публикую")
-        q = b.get("q") or full
-        if q not in full or len(q) > 260:
-            print(f"ПРОПУСК {b['ref']}: фрагмент не совпал с переводом Кулиева")
-            used[b["ref"]] = "skip"
-            continue
-        post = {"quote": display_quote(q, full), "source": f"Коран, {b['ref']}", "explain": b["x"]}
-        bank_ref = b["ref"]
-        break
-    if not post:
-        refs = {b["ref"] for b in bank}
-        for k in [k for k in used if k in refs]:
-            del used[k]
-        print("Банк аятов пройден — начинаю заново по кругу")
-        full = None
-        for b in [b for b in bank if b["t"] == cat] + [b for b in bank if b["t"] != cat]:
-            full = kuliev(b["ref"]); q = b.get("q") or (full or "")
-            if full and q in full and len(q) <= 260:
-                post = {"quote": display_quote(q, full), "source": f"Коран, {b['ref']}", "explain": b["x"]}
-                bank_ref = b["ref"]; break
-        if not post:
-            sys.exit("Не удалось подобрать аят")
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pillow"], check=True)
+from render import render
+import content as C
 
-if post.get("image"):
-    image_path = post["image"]
+pointer = None                                    # (ключ в used.json, новое значение) — двигаем только после публикации
+if post:                                          # ручной пост из schedule.json
+    cards = [] if post.get("image") else [(post["quote"], post["source"], post.get("explain", ""), "СЛОВА ВСЕВЫШНЕГО")]
+    text = post.get("text") or post.get("explain", "")
+elif hour % 2 == 0:                               # чётный час — следующий аят Корана по порядку
+    n = int(used.get("q_next", 1))
+    got = C.ayah_cards((n - 1) % C.TOTAL_AYAHS + 1)
+    if not got:
+        sys.exit("Не удалось получить перевод Кулиева — пропускаю час, ничего не публикую")
+    cards, text, ref = got
+    pointer = ("q_next", n + 1)
+    print("Аят", n, ref)
+else:                                             # нечётный час — следующий хадис
+    H = C.hadiths()
+    k = int(used.get("h_next", 0))
+    h = H[k % len(H)]
+    cards, text = C.hadith_cards(h)
+    pointer = ("h_next", k + 1)
+    print("Хадис", k, h["id"])
+
+if post and post.get("image"):
+    paths = [post["image"]]
 else:
-    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pillow"], check=True)
-    from render import render
-    img = render(post["quote"], post["source"], post.get("explain", ""), hour)
-    buf = io.BytesIO(); img.save(buf, "JPEG", quality=90)
-    image_path = f"cards/{slot.replace(':', '-')}.jpg"
-    put_file(image_path, buf.getvalue(), f"card {image_path}")
+    paths = []
+    for i, (q, src, ex, kicker) in enumerate(cards[:20], 1):
+        img = render(q, src, ex, hour, kicker=kicker)
+        buf = io.BytesIO(); img.save(buf, "JPEG", quality=90)
+        path = f"cards/{slot.replace(':', '-')}" + (f"_{i}" if len(cards) > 1 else "") + ".jpg"
+        put_file(path, buf.getvalue(), f"card {path}")
+        paths.append(path)
     time.sleep(5)
 
-image_url = f"https://raw.githubusercontent.com/{REPO}/main/{urllib.parse.quote(image_path)}"
-print("QUOTE:", post.get("quote", ""))
+urls = [f"https://raw.githubusercontent.com/{REPO}/main/{urllib.parse.quote(p)}" for p in paths]
+print("CARDS:", [c[0][:60] for c in cards])
 if dry:
-    print("DRY", image_url)
+    print("DRY", urls, "\n", text)
     sys.exit(0)
-text = post.get("text") or post.get("explain", "")
 user_id = threads("GET", "me", fields="id")["id"]
-container = threads("POST", f"{user_id}/threads", media_type="IMAGE", image_url=image_url, text=text)
+if len(urls) == 1:
+    container = threads("POST", f"{user_id}/threads", media_type="IMAGE", image_url=urls[0], text=text)
+else:
+    kids = [threads("POST", f"{user_id}/threads", media_type="IMAGE", image_url=u, is_carousel_item="true")["id"] for u in urls]
+    time.sleep(10)
+    container = threads("POST", f"{user_id}/threads", media_type="CAROUSEL", children=",".join(kids), text=text)
 time.sleep(30)
 result = threads("POST", f"{user_id}/threads_publish", creation_id=container["id"])
-print(f"Опубликовано {slot}: {image_path} -> {result}")
-used[bank_ref or f"slot {slot}"] = slot
+print(f"Опубликовано {slot}: {paths} -> {result}")
+used[f"slot {slot}"] = slot
+if pointer:
+    used[pointer[0]] = pointer[1]
 put_file("used.json", json.dumps(used, ensure_ascii=False, indent=1).encode(), f"used {slot}")
