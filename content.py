@@ -99,7 +99,8 @@ def hadith_cards(h):
     intro, body = hadith_parts(h)
     parts = chunks(body)
     grade = h.get("grade") or "Хадис"
+    attr = h.get("attr", ""); attr = attr[:1].upper() + attr[1:]
     cards = [(show(p, i, len(parts)), grade + (f" · {i + 1}/{len(parts)}" if len(parts) > 1 else ""),
-              h.get("attr", ""), "ХАДИС") for i, p in enumerate(parts)]
-    caption = ((intro + "\n\n") if intro else "") + f"{h.get('attr', '')}. {grade}.\n\n#хадис #сунна #ислам"
+              attr, "ХАДИС") for i, p in enumerate(parts)]
+    caption = ((intro + "\n\n") if intro else "") + f"{attr}. {grade}.\n\n#хадис #сунна #ислам"
     return cards, caption[:490]
