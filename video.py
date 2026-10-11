@@ -19,20 +19,28 @@ SURAS = ["112", "113", "114", "1", "103", "108", "110", "106", "105", "107", "11
 PHOTOS = ["green_tex.jpg", "brown_tex.jpg", "L1033130.jpg"]
 START = "2026-10-11"
 
-HOURS = [9, 12, 15, 18, 21]                     # 5 Shorts в день, время по Алматы
+COUNTS = [7, 286, 200, 176, 120, 165, 206, 75, 129, 109, 123, 111, 43, 52, 99, 128, 111, 110, 98, 135, 112, 78, 118, 64, 77, 227, 93, 88, 69, 60, 34, 30, 73, 54, 45, 83, 182, 88, 75, 85, 54, 53, 89, 59, 37, 35, 38, 29, 18, 45, 60, 49, 62, 55, 78, 96, 29, 22, 24, 13, 14, 11, 11, 18, 12, 12, 30, 52, 52, 44, 28, 28, 20, 56, 40, 31, 50, 40, 46, 42, 29, 19, 36, 25, 22, 17, 19, 26, 30, 20, 15, 21, 11, 8, 8, 19, 5, 8, 8, 11, 11, 8, 3, 9, 5, 4, 7, 3, 6, 3, 5, 4, 5, 6]
+
+def locate(n):
+    """Сквозной номер аята 1..6236 -> (сура, аят)."""
+    for s, c in enumerate(COUNTS, 1):
+        if n <= c:
+            return s, n
+        n -= c
+    return 1, 1
 
 def auto_spec(slot=None):
-    """Что выкладывать в этот слот (2026-10-11T12): по кругу SURAS + целые аяты из bank.json."""
-    import datetime
-    from zoneinfo import ZoneInfo
-    now = datetime.datetime.now(ZoneInfo("Asia/Almaty"))
-    day = datetime.date.fromisoformat(slot[:10]) if slot else now.date()
-    hour = int(slot[11:13]) if slot and len(slot) >= 13 else 18
-    k = HOURS.index(hour) if hour in HOURS else 0
-    n = (day - datetime.date.fromisoformat(START)).days * len(HOURS) + k
-    bank = [b["ref"] for b in json.load(open(os.path.join(HERE, "bank.json"), encoding="utf-8")) if not b.get("q")]
-    seq = SURAS + [r for r in bank if r not in SURAS]
-    return seq[n % len(seq)], PHOTOS[n % len(PHOTOS)]
+    """Следующий отрывок Корана по порядку (yt_state.json): аяты одной суры, примерно до 50 секунд чтения.
+    Новое значение пишется в yt_state.json — workflow сохраняет его только после успешной загрузки на YouTube."""
+    st = json.load(open(os.path.join(HERE, "yt_state.json"))) if os.path.exists(os.path.join(HERE, "yt_state.json")) else {"next": 1}
+    n = (int(st.get("next", 1)) - 1) % sum(COUNTS) + 1
+    s, a = locate(n)
+    d = json.loads(get(f"https://api.alquran.cloud/v1/surah/{s}/quran-uthmani"))["data"]["ayahs"]
+    b, total = a, len(d[a - 1]["text"])
+    while b < COUNTS[s - 1] and b - a < 11 and total + len(d[b]["text"]) <= 650:
+        total += len(d[b]["text"]); b += 1
+    json.dump({"next": n + (b - a + 1)}, open(os.path.join(HERE, "yt_state.json"), "w"))
+    return f"{s}:{a}-{b}", PHOTOS[n % len(PHOTOS)]
 
 def ensure_ar_font():
     if os.path.exists(AR_FONT):
@@ -193,6 +201,21 @@ def background(photo, total_frames):
         return ph.crop((int(cx - cw / 2), int(cy - ch / 2), int(cx + cw / 2), int(cy + ch / 2))).resize((W, H), Image.BILINEAR)
     return frame
 
+def pages_of(ar, ru, limit=330):
+    """Длинный аят -> части [(арабский, русский)]: русский режем по предложениям, арабский — пропорционально по словам."""
+    if len(ru) <= limit + 60:
+        return [(ar, ru)]
+    import content
+    rp = content.chunks(ru, limit)
+    rp = [content.show(p, i, len(rp)) for i, p in enumerate(rp)]
+    words, total, out, used_w = ar.split(), sum(len(p) for p in rp), [], 0
+    acc = 0
+    for i, p in enumerate(rp):
+        acc += len(p)
+        upto = len(words) if i == len(rp) - 1 else max(used_w + 1, round(len(words) * acc / total))
+        out.append((" ".join(words[used_w:upto]), p)); used_w = upto
+    return out
+
 def build(spec, photo, out, offer=("Намазные коврики ummati", "Акция 1+1: 2 коврика за 9 900 ₸")):
     R.ensure_fonts(); ensure_ar_font()
     work = os.path.join(os.path.dirname(os.path.abspath(out)), "_work"); os.makedirs(work, exist_ok=True)
@@ -203,8 +226,13 @@ def build(spec, photo, out, offer=("Намазные коврики ummati", "А
     # таймлайн: (начало, конец, слой)
     scenes, t = [], 0.0
     for i, (x, y, dur) in enumerate(zip(ar, ru, durs)):
-        start = t; t += (intro if i == 0 else 0) + dur + gap
-        scenes.append((start, t, ayah_layer(x, y, f"Коран, {s}:{a + i} · пер. Э. Кулиева", i, len(ar))))
+        ref_i = f"Коран, {s}:{a + i} · пер. Э. Кулиева"
+        pages = pages_of(x, y)
+        t += intro if i == 0 else 0
+        for j, (px, py) in enumerate(pages):           # длинный аят показываем по частям, пока звучит чтение
+            start = t if (i or j) else 0.0
+            t += dur * len(py) / max(1, sum(len(q) for _, q in pages)) + (gap if j == len(pages) - 1 else 0)
+            scenes.append((start, t, ayah_layer(px, py, ref_i + (f" · {j + 1}/{len(pages)}" if len(pages) > 1 else ""), i, len(ar))))
     scenes.append((t, t + outro, outro_layer(offer)))
     total = t + outro
     # звук: пауза intro, аяты с паузами gap, тишина в конце
@@ -237,8 +265,10 @@ def build(spec, photo, out, offer=("Намазные коврики ummati", "А
             if al > 0: img.alpha_composite(lay if al >= 1 else fade_l(lay, al))
         enc.stdin.write(img.convert("RGB").tobytes())
     enc.stdin.close(); enc.wait()
-    ref = f"{s}" if len(ar) > 1 and a == 1 else f"{s}:{a}" + (f"-{a + len(ar) - 1}" if len(ar) > 1 else "")
-    meta = {"title": f"{title} — чтение и перевод смыслов #shorts" if len(ar) > 1 or a == 1 else f"Коран, {ref} — чтение и перевод смыслов #shorts",
+    whole = a == 1 and a + len(ar) - 1 == COUNTS[s - 1]
+    ref = f"{s}" if whole else f"{s}:{a}" + (f"-{a + len(ar) - 1}" if len(ar) > 1 else "")
+    part = "" if whole else (f", аят {a}" if len(ar) == 1 else f", аяты {a}–{a + len(ar) - 1}")
+    meta = {"title": f"{title}{part} — чтение и перевод смыслов #shorts",
             "description": " ".join(ru) + f"\n\nКоран, {ref}. Перевод смыслов: Э. Кулиев. Чтец: Мишари Рашид аль-Афаси.\n\n"
                            "Ummati — намазные коврики. Акция 1+1: 2 коврика за 9 900 ₸, вода Зам-Зам, тасбих и подарочная упаковка в комплекте. "
                            "Instagram: @ummati.family\n\n#коран #ислам #намаз #сура #shorts"}
