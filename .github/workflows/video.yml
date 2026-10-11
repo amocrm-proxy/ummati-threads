@@ -3,13 +3,17 @@ on:
   workflow_dispatch:
     inputs:
       spec:
-        description: "Сура или аяты, например 112, 2:255, 103:1-3 (auto — по плану на сегодня)"
+        description: "Сура или аяты, например 112, 2:255, 103:1-3 (auto — по плану)"
         default: "112"
       photo:
         description: "Фото для фона"
         default: "green_tex.jpg"
       youtube:
         description: "Загрузить на YouTube"
+        type: boolean
+        default: false
+      reels:
+        description: "Опубликовать в Instagram как Reels"
         type: boolean
         default: false
 permissions:
@@ -30,7 +34,12 @@ jobs:
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
-      - if: ${{ inputs.spec != 'auto' }}
+      - if: ${{ !cancelled() && inputs.reels }}
+        run: python reel.py "$(echo $OUT | tr ':' '_').mp4"
+        env:
+          IG_TOKEN: ${{ secrets.IG_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - if: ${{ !startsWith(inputs.spec, 'auto') }}
         run: |
           git config user.name "ummati-bot"
           git config user.email "bot@users.noreply.github.com"
