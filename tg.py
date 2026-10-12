@@ -50,10 +50,13 @@ def run(put_file, now):
         return
     st = load()
     changed = False
-    for u in tg("getUpdates", offset=st["offset"], timeout=0):
+    ups = tg("getUpdates", offset=st["offset"], timeout=0)
+    print("Telegram: бот @" + tg("getMe").get("username", "?"), "| новых сообщений:", len(ups), "| владелец задан:", bool(st["owner"]))
+    for u in ups:
         st["offset"] = u["update_id"] + 1; changed = True
         msg = u.get("message") or {}
         chat = msg.get("chat", {}).get("id")
+        print("Telegram: обновление", [k for k in u if k != "update_id"], msg.get("chat", {}).get("type"), (msg.get("text") or "")[:10])
         if st["owner"] is None and chat and msg.get("chat", {}).get("type") == "private":   # первый написавший = владелец
             st["owner"] = chat
             send_week(st); st["week"] = now.strftime("%G-%V")
