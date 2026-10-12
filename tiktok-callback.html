@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ummati — вход в TikTok</title>
+<style>body{font-family:system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 16px;line-height:1.6;color:#1d2b26;background:#f7f2ea}code{display:block;word-break:break-all;background:#fff;border:1px solid #d9cfbf;padding:12px;border-radius:6px}</style></head>
+<body>
+<h1>Ummati Autopost × TikTok</h1>
+<p id="msg">Проверяю ответ TikTok…</p>
+<code id="code"></code>
+<script>
+const p = new URLSearchParams(location.search);
+const code = p.get("code"), err = p.get("error");
+if (code) {
+  document.getElementById("msg").textContent = "Доступ разрешён. Код авторизации (действует несколько минут, одноразовый):";
+  document.getElementById("code").textContent = code;
+} else {
+  document.getElementById("msg").textContent = err ? "TikTok вернул ошибку: " + err + " " + (p.get("error_description") || "") : "Кода нет — откройте ссылку входа заново.";
+  document.getElementById("code").remove();
+}
+</script>
+<p><a href="privacy.html">Политика конфиденциальности</a> · <a href="terms.html">Условия использования</a></p>
+</body></html>
