@@ -46,12 +46,11 @@ jobs:
           git config user.email "bot@users.noreply.github.com"
           git add yt_state.json
           git commit -m "yt_state"
-          for i in 1 2 3; do git pull --rebase -q && git push && break; sleep 5; done
-      - if: ${{ !startsWith(inputs.spec, 'auto') }}
+          for i in 1 2 3; do git pull --rebase --autostash -q && git push && break; sleep 5; done
+      - if: ${{ !startsWith(inputs.spec, 'auto') && !startsWith(inputs.spec, 'voice') }}
         run: |
           git config user.name "ummati-bot"
           git config user.email "bot@users.noreply.github.com"
           git add videos
           git commit -m "video ${{ inputs.spec }}"
-          git pull --rebase -q
-          git push
+          for i in 1 2 3; do git pull --rebase --autostash -q && git push && break; sleep 5; done
