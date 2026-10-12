@@ -41,7 +41,7 @@ def text_slide(pal, kicker, title=None, body=None, quote=None, source=None, page
     big = quote or title
     n = len(big or "")
     if quote:
-        qs = 92 if n < 40 else 80 if n < 60 else 70 if n < 90 else 60 if n < 150 else 52
+        qs = 92 if n < 40 else 80 if n < 60 else 70 if n < 90 else 60 if n < 150 else 52 if n < 380 else 44
         fb = R.font("CormorantGaramond_500Medium.ttf", qs + (8 if story else 0)); big = "«" + quote + "»"
     else:
         qs = 88 if n < 30 else 74 if n < 55 else 62 if n < 90 else 54

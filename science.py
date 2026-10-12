@@ -35,11 +35,15 @@ def build(e):
     for r, t in zip(e["refs"], texts):
         parts = C.chunks(t, 300)
         pieces += [(C.show(p, i, len(parts)), f"Коран, {r}") for i, p in enumerate(parts)]
-    n = 1 + len(pieces) + 2
+    s0, a0 = map(int, e["refs"][0].split(":"))
+    tc = C.tafsir_card(s0, a0)                    # краткий смысл первого аята по тафсиру ас-Саади
+    n = 1 + len(pieces) + (1 if tc else 0) + 2
     ims = [R.text_slide("emer", "Аят и наука", title=e["hook"], body="Листайте →", page=f"1/{n}")]
     for i, (q, src) in enumerate(pieces, 2):
         ims.append(R.text_slide("cream", "Слова Всевышнего", quote=q, source=src,
                                 body="Перевод смыслов Э. Кулиева", page=f"{i}/{n}"))
+    if tc:
+        ims.append(R.text_slide("emer", "Смысл аята", quote=tc[0], source=tc[1], body=tc[2], page=f"{len(ims) + 1}/{n}"))
     ims.append(R.text_slide("choc", "Что открыла наука", title=e["big"], body=e["fact"], page=f"{n - 1}/{n}"))
     ims.append(R.text_slide("emer", "Задумайтесь", title=None, body=e["note"] + "\n\nИсточник: " + e["source"],
                             page=f"{n}/{n}", footer="Сохраните и поделитесь"))

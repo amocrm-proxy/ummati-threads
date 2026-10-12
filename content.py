@@ -8,7 +8,8 @@ NAMES = ["Аль-Фатиха", "Аль-Бакара", "Али Имран", "А�
 def get_json(url):
     for i in range(3):
         try:
-            with urllib.request.urlopen(url, timeout=30) as r:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (ummati-bot)", "Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=30) as r:
                 return json.load(r)
         except Exception as e:
             print("сеть:", url.split("?")[0], e); time.sleep(5 * (i + 1))
@@ -68,6 +69,48 @@ def show(piece, i, n):
         s = s.replace("„", "", depth)
     return s
 
+TAFSIR = "https://api.quran.com/api/v4/tafsirs/170/by_ayah/{}:{}"   # Тафсир ас-Саади, перевод Э. Кулиева
+
+def excerpt(text, lo=200, hi=460):
+    """Начало тафсира целыми предложениями (слова не меняются). None — если не удалось вырезать аккуратно."""
+    t = " ".join(re.sub(r"<[^>]+>", " ", text).split())
+    sents = re.split(r"(?<=[.!?])\s+(?=[А-ЯЁA-Z«(„\"])", t)
+    out = ""
+    for s in sents:
+        if out and len(out) >= lo and out.count("«") == out.count("»") and out.count("(") == out.count(")"):
+            break
+        if len(out) + len(s) > 520:
+            break
+        out = (out + " " + s).strip()
+    while out.endswith(":"):                      # «...и сказал:» — дальше идёт следующий аят, обрываем раньше
+        cut = max(out.rfind(". "), out.rfind("! "), out.rfind("? "))
+        out = out[:cut + 1].strip() if cut > 0 else ""
+    if not out or out.count("«") != out.count("»") or out.count("(") != out.count(")") or len(out) > 520:
+        return None
+    return out
+
+def tafsir(s, k):
+    """Краткое пояснение к аяту s:k из тафсира ас-Саади -> (текст, подпись) или None.
+    Если к самому аяту комментария нет (ас-Саади толкует группу аятов), берём ближайший предыдущий в суре."""
+    for j in range(k, max(0, k - 6), -1):
+        d = get_json(TAFSIR.format(s, j))
+        text = ((d or {}).get("tafsir") or {}).get("text") or ""
+        if text.strip():
+            ex = excerpt(text)
+            if not ex:
+                return None
+            where = f"{s}:{k}" if j == k else f"{s}:{j}–{k}"
+            return ex, f"Тафсир ас-Саади к аяту {where}" if j == k else f"Тафсир ас-Саади к аятам {where}"
+        if d is None:
+            return None
+    return None
+
+def tafsir_card(s, k):
+    t = tafsir(s, k)
+    if not t:
+        return None
+    return (show(t[0], 0, 1), t[1], "Перевод Э. Кулиева, сокращено", "СМЫСЛ АЯТА")
+
 def ayah_cards(n):
     """Карточки для аята n: [(цитата, источник, пояснение, kicker)], подпись, (сура, аят)."""
     a = ayah(n)
@@ -79,6 +122,13 @@ def ayah_cards(n):
     cards = [(show(p, i, len(parts)), src + (f" · {i + 1}/{len(parts)}" if len(parts) > 1 else ""),
               f"Сура «{NAMES[s - 1]}». Перевод смыслов Э. Кулиева", "СЛОВА ВСЕВЫШНЕГО") for i, p in enumerate(parts)]
     caption = f"Коран, сура «{NAMES[s - 1]}», аят {k}. Перевод смыслов Э. Кулиева.\n\n#коран #ислам #аят"
+    tc = tafsir_card(s, k)
+    if tc:
+        cards.append(tc)
+        first = re.split(r"(?<=[.!?])\s+", tc[0])[0]
+        extra = f"\n\nСмысл (тафсир ас-Саади): {first}"
+        if len(caption) + len(extra) <= 490:
+            caption = caption.replace("\n\n#коран", extra + "\n\n#коран")
     return cards, caption, (s, k)
 
 def hadiths():

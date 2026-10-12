@@ -151,8 +151,10 @@ def auto_item(slot, used):
         got = content.ayah_cards((n - 1) % content.TOTAL_AYAHS + 1)
         if not got: return None
         PENDING["igq_next"] = n + 1
-        return "stories", [R.text_slide("cream", "Слова Всевышнего", quote=q, source=src, body=ex, story=True)
-                           for q, src, ex, _ in got[0]], ""
+        return "stories", [R.text_slide("cream" if kick == "СЛОВА ВСЕВЫШНЕГО" else "emer",
+                                        "Слова Всевышнего" if kick == "СЛОВА ВСЕВЫШНЕГО" else "Смысл аята",
+                                        quote=q, source=src, body=ex, story=True)
+                           for q, src, ex, kick in got[0]], ""
     if h == 14:                                  # хадисы по порядку из hadiths.json
         import content
         H = content.hadiths(); k = int(used.get("igh_next", 0))

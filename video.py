@@ -288,8 +288,16 @@ def build(spec, photo, out, offer=("Намазные коврики ummati", "А
     whole = a == 1 and a + len(ar) - 1 == COUNTS[s - 1]
     ref = f"{s}" if whole else f"{s}:{a}" + (f"-{a + len(ar) - 1}" if len(ar) > 1 else "")
     part = "" if whole else (f", аят {a}" if len(ar) == 1 else f", аяты {a}–{a + len(ar) - 1}")
+    smysl = ""
+    try:                                              # краткий смысл первого аята (тафсир ас-Саади, пер. Э. Кулиева)
+        import content
+        t = content.tafsir(s, a)
+        if t:
+            smysl = f"Смысл: {t[0]}\n({t[1]}, перевод Э. Кулиева, сокращено)\n\n"
+    except Exception as e:
+        print("тафсир:", e)
     meta = {"title": f"{title}{part} — " + ("размышление и чтение" if voice else "чтение и перевод смыслов") + " #shorts",
-            "description": " ".join(ru) + f"\n\nКоран, {ref}. Перевод смыслов: Э. Кулиев. Чтец: Мишари Рашид аль-Афаси.\n\n"
+            "description": " ".join(ru) + f"\n\nКоран, {ref}. Перевод смыслов: Э. Кулиев. Чтец: Мишари Рашид аль-Афаси.\n\n" + smysl +
                            "Ummati — намазные коврики. Акция 1+1: 2 коврика за 9 900 ₸, вода Зам-Зам, тасбих и подарочная упаковка в комплекте. "
                            "Instagram: @ummati.family\n\n#коран #ислам #намаз #сура #shorts"}
     json.dump(meta, open(out.rsplit(".", 1)[0] + ".json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
