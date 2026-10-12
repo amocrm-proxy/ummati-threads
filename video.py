@@ -216,7 +216,20 @@ def pages_of(ar, ru, limit=330):
         out.append((" ".join(words[used_w:upto]), p)); used_w = upto
     return out
 
-def build(spec, photo, out, offer=("Намазные коврики ummati", "Акция 1+1: 2 коврика за 9 900 ₸")):
+def voice_layer(ru, ref):
+    """Кадр, пока звучит голос автора: «Размышление» + перевод смыслов аята."""
+    L = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(L)
+    m = len(ru); fr = R.font("CormorantGaramond_500Medium.ttf", 64 if m < 80 else 54 if m < 160 else 46 if m < 260 else 40)
+    rl = wrap(d, ru, fr, W - 200); rlh = int(fr.size * 1.2)
+    y = max(420, 980 - (len(rl) * rlh + 160) // 2)
+    spaced(d, y, "РАЗМЫШЛЕНИЕ", R.font("Montserrat_600SemiBold.ttf", 26), (*ACC, 255), 9); y += 50
+    orn(d, y); y += 50
+    for ln in rl:
+        d.text(((W - d.textlength(ln, font=fr)) / 2, y), ln, font=fr, fill=(*FG, 255)); y += rlh
+    spaced(d, y + 36, ref.upper(), R.font("Montserrat_600SemiBold.ttf", 24), (*ACC, 230), 5)
+    return L
+
+def build(spec, photo, out, offer=("Намазные коврики ummati", "Акция 1+1: 2 коврика за 9 900 ₸"), voice=None):
     R.ensure_fonts(); ensure_ar_font()
     work = os.path.join(os.path.dirname(os.path.abspath(out)), "_work"); os.makedirs(work, exist_ok=True)
     s, name, a, ar, ru, nums = load(spec)
@@ -225,12 +238,19 @@ def build(spec, photo, out, offer=("Намазные коврики ummati", "А
     title = f"Сура «{NAMES[s - 1]}»"
     # таймлайн: (начало, конец, слой)
     scenes, t = [], 0.0
+    if voice:                                           # сначала голос автора, потом чтение
+        p = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", voice],
+                           capture_output=True, text=True, check=True)
+        t = intro + float(p.stdout.strip()) + gap
+        scenes.append((0.0, t, voice_layer(" ".join(ru) if len(" ".join(ru)) < 300 else ru[0],
+                                           f"Коран, {s}:{a}" + (f"-{a + len(ar) - 1}" if len(ar) > 1 else ""))))
+        files = [voice] + files
     for i, (x, y, dur) in enumerate(zip(ar, ru, durs)):
         ref_i = f"Коран, {s}:{a + i} · пер. Э. Кулиева"
         pages = pages_of(x, y)
-        t += intro if i == 0 else 0
+        t += intro if i == 0 and not voice else 0
         for j, (px, py) in enumerate(pages):           # длинный аят показываем по частям, пока звучит чтение
-            start = t if (i or j) else 0.0
+            start = t if (i or j or voice) else 0.0
             t += dur * len(py) / max(1, sum(len(q) for _, q in pages)) + (gap if j == len(pages) - 1 else 0)
             scenes.append((start, t, ayah_layer(px, py, ref_i + (f" · {j + 1}/{len(pages)}" if len(pages) > 1 else ""), i, len(ar))))
     scenes.append((t, t + outro, outro_layer(offer)))
@@ -268,7 +288,7 @@ def build(spec, photo, out, offer=("Намазные коврики ummati", "А
     whole = a == 1 and a + len(ar) - 1 == COUNTS[s - 1]
     ref = f"{s}" if whole else f"{s}:{a}" + (f"-{a + len(ar) - 1}" if len(ar) > 1 else "")
     part = "" if whole else (f", аят {a}" if len(ar) == 1 else f", аяты {a}–{a + len(ar) - 1}")
-    meta = {"title": f"{title}{part} — чтение и перевод смыслов #shorts",
+    meta = {"title": f"{title}{part} — " + ("размышление и чтение" if voice else "чтение и перевод смыслов") + " #shorts",
             "description": " ".join(ru) + f"\n\nКоран, {ref}. Перевод смыслов: Э. Кулиев. Чтец: Мишари Рашид аль-Афаси.\n\n"
                            "Ummati — намазные коврики. Акция 1+1: 2 коврика за 9 900 ₸, вода Зам-Зам, тасбих и подарочная упаковка в комплекте. "
                            "Instagram: @ummati.family\n\n#коран #ислам #намаз #сура #shorts"}
@@ -283,7 +303,11 @@ if __name__ == "__main__":
     spec = sys.argv[1] if len(sys.argv) > 1 else "112"
     photo = sys.argv[2] if len(sys.argv) > 2 else "green_tex.jpg"
     out = sys.argv[3] if len(sys.argv) > 3 else "short.mp4"
-    if spec.startswith("auto"):
+    voice = None
+    if spec.startswith("voice:"):                       # voice:2:286 -> голос автора из voices/2_286.ogg + чтение аята
+        spec = spec[6:]
+        voice = os.path.join(HERE, "voices", spec.replace(":", "_") + ".ogg")
+    elif spec.startswith("auto"):
         spec, photo = auto_spec(spec[5:] or None)
         print("Сегодня:", spec, photo)
-    print("Готово:", out, f"{build(spec, photo, out):.1f} c")
+    print("Готово:", out, f"{build(spec, photo, out, voice=voice):.1f} c")

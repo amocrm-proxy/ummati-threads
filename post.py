@@ -17,12 +17,19 @@ GH_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GH_HDR = {"Authorization": f"Bearer {GH_TOKEN}", "Accept": "application/vnd.github+json"}
 
 def http(method, url, data=None, headers=None, fatal=True):
-    req = urllib.request.Request(url, data=data, method=method, headers=headers or {})
-    try:
-        with urllib.request.urlopen(req, timeout=60) as r:
-            return json.load(r)
-    except urllib.error.HTTPError as e:
-        msg = f"Ошибка {method} {url.split('?')[0]} {e.code}: {e.read().decode()}"
+    for attempt in range(4):                      # временные сбои (5xx, обрыв сети) — повторяем до 4 раз
+        req = urllib.request.Request(url, data=data, method=method, headers=headers or {})
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            msg = f"Ошибка {method} {url.split('?')[0]} {e.code}: {e.read().decode()}"
+            if e.code >= 500 and attempt < 3:
+                print(msg, "— повтор через 30 с"); time.sleep(30); continue
+        except (urllib.error.URLError, TimeoutError) as e:
+            msg = f"Сеть {method} {url.split('?')[0]}: {e}"
+            if attempt < 3:
+                print(msg, "— повтор через 30 с"); time.sleep(30); continue
         if fatal:
             sys.exit(msg)
         print(msg)
