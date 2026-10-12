@@ -315,6 +315,9 @@ if __name__ == "__main__":
     if spec.startswith("voice:"):                       # voice:2:286 -> голос автора из voices/2_286.ogg + чтение аята
         spec = spec[6:]
         voice = os.path.join(HERE, "voices", spec.replace(":", "_") + ".ogg")
+    elif spec.startswith("card"):                       # card:… -> «Сильный аят»: картинка + чтение (card.py)
+        import card
+        print("Готово:", out, f"{card.build(out):.1f} c"); sys.exit(0)
     elif spec.startswith("auto"):
         spec, photo = auto_spec(spec[5:] or None)
         print("Сегодня:", spec, photo)

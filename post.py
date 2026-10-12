@@ -114,7 +114,7 @@ if not dry:                                       # Telegram-бот: забир�
 yt_key = f"yt {slot[:13]}"
 if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # YouTube Shorts 5 раз в день (+ Reels в 18:00)
     try:
-        spec, vref = f"auto:{slot[:13]}", None
+        spec, vref = (f"card:{slot[:13]}" if hour in (12, 21) else f"auto:{slot[:13]}"), None   # 12 и 21 — «Сильный аят»
         if hour == 18:                                # в 18:00 — ролик с голосом автора, если он записан
             try:
                 import tg
