@@ -31,17 +31,40 @@ def candidates(st):
     done = set(st["voices"]) | set(st["used"]) | {v for v in st["asked"].values()}
     return [b["ref"] for b in json.load(open("bank.json", encoding="utf-8")) if not b.get("q") and b["ref"] not in done]
 
+def script(ref):
+    """Текст для записи голосом: арабский, транслитерация (для заучивания), перевод Кулиева и смысл из тафсира ас-Саади."""
+    def ed(e):
+        d = C.get_json(f"https://api.alquran.cloud/v1/ayah/{ref}/{e}")
+        return d["data"]["text"].strip() if d else ""
+    ar, tr, ru = ed("quran-uthmani"), ed("en.transliteration"), ed("ru.kuliev").replace(" - ", " — ")
+    s, a = map(int, ref.split(":"))
+    t = C.tafsir(s, a)
+    parts = [f"Коран, {ref}", ar, f"Транслитерация: {tr}" if tr else "", "",
+             "🎙 ТЕКСТ ДЛЯ ЗАПИСИ (читай спокойно, 30–50 секунд):",
+             f"1) Перевод смыслов (Кулиев): «{ru}»"]
+    if t:
+        parts.append(f"2) Смысл ({t[1]}, пер. Кулиева): {t[0]}")
+    parts.append(f"{3 if t else 2}) Одним предложением от себя: что ты возьмёшь из этого аята сегодня.")
+    return "\n".join(p for p in parts if p is not None)
+
 def send_week(st):
     refs = candidates(st)[:7]
     tg("sendMessage", chat_id=st["owner"], text=(
         "Ассаляму алейкум! Аяты на неделю для рубрики «Размышление».\n\n"
-        "Ответь голосовым на каждое сообщение ниже (свайп влево → ответить). 15–25 секунд: "
-        "что этот аят значит для тебя и как его применить сегодня. Без пересказа перевода — он будет на экране.\n"
+        "Под каждым аятом — текст для записи. Ответь голосовым на сообщение с аятом (свайп влево → ответить) "
+        "и прочитай текст. Арабский и транслитерация — чтобы заучивать, читать их в записи не обязательно.\n"
         "Ролик с твоим голосом выходит каждый день в 18:00."))
     for ref in refs:
-        d = C.get_json(f"https://api.alquran.cloud/v1/ayah/{ref}/ru.kuliev")
-        text = d["data"]["text"].replace(" - ", " — ") if d else ""
-        m = tg("sendMessage", chat_id=st["owner"], text=f"Коран, {ref}\n«{text}»")
+        m = tg("sendMessage", chat_id=st["owner"], text=script(ref))
+        st["asked"][str(m["message_id"])] = ref
+        time.sleep(1)
+
+def resend_scripts(st):
+    """Один раз: дослать тексты для записи к уже отправленным аятам (ответом на исходное сообщение)."""
+    for mid, ref in list(st["asked"].items()):
+        if ref in st["voices"] or ref in st["used"]:
+            continue
+        m = tg("sendMessage", chat_id=st["owner"], text=script(ref), reply_to_message_id=int(mid))
         st["asked"][str(m["message_id"])] = ref
         time.sleep(1)
 
@@ -85,6 +108,8 @@ def run(put_file, now):
                text=f"Записал для {ref}. В очереди роликов: {len([r for r in st['voices'] if r not in st['used']])}. Осталось записать: {left}.")
         elif msg.get("text", "").startswith("/list"):
             send_week(st)
+    if st["owner"] and st.get("v", 1) < 2:
+        resend_scripts(st); st["v"] = 2; changed = True
     if st["owner"] and now.weekday() == 6 and now.hour == 20 and st.get("week") != (now + datetime.timedelta(days=1)).strftime("%G-%V"):
         send_week(st); st["week"] = (now + datetime.timedelta(days=1)).strftime("%G-%V"); changed = True
     if changed:

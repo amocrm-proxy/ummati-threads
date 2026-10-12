@@ -42,7 +42,7 @@ def photo_bg(name):
     ov = Image.new("RGBA", im.size, (8, 20, 16, 120))
     return Image.alpha_composite(im.convert("RGBA"), ov)
 
-def card_image(text, s, a, photo):
+def card_image(text, s, a, photo, kicker=None):
     """Кадр 1210x2150 (с запасом под медленный наезд камеры)."""
     R.ensure_fonts()
     img = photo_bg(photo)
@@ -50,13 +50,13 @@ def card_image(text, s, a, photo):
     d = ImageDraw.Draw(img)
     dx, dy = (w - W) // 2, (h - H) // 2
     fk = R.font("Montserrat_600SemiBold.ttf", 30)
-    sura = f"СУРА {s} · {C.NAMES[s - 1].upper()}"
+    sura = kicker or f"СУРА {s} · {C.NAMES[s - 1].upper()}"
     tw = d.textlength(sura, font=fk) + len(sura) * 6
     x = (w - tw) / 2; y = dy + 600
     for ch in sura:
         d.text((x, y), ch, font=fk, fill=ACC); x += d.textlength(ch, font=fk) + 6
     fa = R.font("Montserrat_400Regular.ttf", 30)
-    ref = f"аят {a}"
+    ref = f"Коран, {s}:{a}" if kicker else f"аят {a}"
     d.text(((w - d.textlength(ref, font=fa)) / 2, y + 48), ref, font=fa, fill=MUT)
     n = len(text)
     size = 86 if n < 60 else 76 if n < 100 else 66 if n < 140 else 58
@@ -107,6 +107,40 @@ def build(out):
                            "Чтец: Мишари Рашид аль-Афаси.\n\n" + smysl +
                            "Ummati — намазные коврики. Акция 1+1: 2 коврика за 9 900 ₸, вода Зам-Зам, тасбих и подарочная упаковка в комплекте. "
                            "Instagram: @ummati.family\n\n#коран #ислам #аят #намаз #shorts"}
+    json.dump(meta, open(out.rsplit(".", 1)[0] + ".json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    return total
+
+def build_voice(ref, voice, out):
+    """«Размышление»: карточка аята + голос автора (без чужого чтения — никаких заявок по авторским правам)."""
+    d = C.get_json(f"https://api.alquran.cloud/v1/ayah/{ref}/ru.kuliev")
+    if not d or d["data"]["edition"]["identifier"] != "ru.kuliev":
+        raise SystemExit("Нет перевода Кулиева")
+    text = d["data"]["text"].replace(" - ", " — ").strip()
+    s, a = d["data"]["surah"]["number"], d["data"]["numberInSurah"]
+    work = out.rsplit(".", 1)[0] + "_voice"
+    os.makedirs(work, exist_ok=True)
+    dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", voice],
+                               capture_output=True, text=True, check=True).stdout.strip())
+    total = dur + 2.0
+    shown = text if len(text) <= 260 else text[:text.rfind(" ", 0, 250)].rstrip(",;:—-") + "…"
+    png = os.path.join(work, "card.png")
+    card_image(shown, s, a, PHOTOS[a % len(PHOTOS)], kicker="РАЗМЫШЛЕНИЕ").save(png)
+    frames = int(total * 30)
+    vf = (f"zoompan=z='1+0.05*on/{frames}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={W}x{H}:fps=30,"
+          f"fade=t=in:st=0:d=0.6,fade=t=out:st={total - 0.8:.2f}:d=0.8")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-loop", "1", "-i", png, "-i", voice,
+                    "-filter_complex", f"[0:v]{vf}[v];[1:a]adelay=700|700,loudnorm=I=-16:TP=-1.5,apad[a]",
+                    "-map", "[v]", "-map", "[a]", "-t", f"{total:.2f}", "-c:v", "libx264", "-preset", "medium",
+                    "-crf", "20", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", out],
+                   check=True)
+    smysl = ""
+    t = C.tafsir(s, a)
+    if t:
+        smysl = f"Смысл: {t[0]}\n({t[1]}, перевод Э. Кулиева, сокращено)\n\n"
+    meta = {"title": f"Размышление над аятом {s}:{a} — сура «{C.NAMES[s - 1]}» #shorts",
+            "description": f"«{text}»\n\nКоран, сура «{C.NAMES[s - 1]}», аят {a}. Перевод смыслов: Э. Кулиев.\n\n" + smysl +
+                           "Рубрика «Размышление» от Ummati: каждый день один аят и мысль о том, как применить его сегодня.\n\n"
+                           "Ummati — намазные коврики. Instagram: @ummati.family\n\n#коран #ислам #аят #размышление #shorts"}
     json.dump(meta, open(out.rsplit(".", 1)[0] + ".json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     return total
 

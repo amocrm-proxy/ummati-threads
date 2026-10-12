@@ -124,7 +124,7 @@ if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # YouTube S
             if vref:
                 spec = f"voice:{vref}"
         YOUTUBE = False                               # пауза: Content ID блокирует чтение Алафаси (12/10/2026) — до смены звука
-        inputs = {"spec": spec, "youtube": "true" if YOUTUBE else "false", "reels": "true" if hour == 18 else "false"}
+        inputs = {"spec": spec, "youtube": "true" if YOUTUBE or spec.startswith("voice") else "false", "reels": "true" if hour == 18 else "false"}
         urllib.request.urlopen(urllib.request.Request(
             f"https://api.github.com/repos/{REPO}/actions/workflows/video.yml/dispatches", method="POST", headers=GH_HDR,
             data=json.dumps({"ref": "main", "inputs": inputs}).encode()), timeout=30)

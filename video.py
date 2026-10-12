@@ -312,9 +312,11 @@ if __name__ == "__main__":
     photo = sys.argv[2] if len(sys.argv) > 2 else "green_tex.jpg"
     out = sys.argv[3] if len(sys.argv) > 3 else "short.mp4"
     voice = None
-    if spec.startswith("voice:"):                       # voice:2:286 -> голос автора из voices/2_286.ogg + чтение аята
-        spec = spec[6:]
-        voice = os.path.join(HERE, "voices", spec.replace(":", "_") + ".ogg")
+    if spec.startswith("voice:"):                       # voice:2:286 -> карточка аята + голос автора (voices/2_286.ogg)
+        import card
+        ref = spec[6:]
+        print("Готово:", out, f"{card.build_voice(ref, os.path.join(HERE, 'voices', ref.replace(':', '_') + '.ogg'), out):.1f} c")
+        sys.exit(0)
     elif spec.startswith("card"):                       # card:… -> «Сильный аят»: картинка + чтение (card.py)
         import card
         print("Готово:", out, f"{card.build(out):.1f} c"); sys.exit(0)
