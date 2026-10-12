@@ -16,6 +16,10 @@ on:
         description: "Опубликовать в Instagram как Reels"
         type: boolean
         default: false
+      tiktok:
+        description: "Отправить в TikTok"
+        type: boolean
+        default: false
 permissions:
   contents: write
 jobs:
@@ -35,7 +39,8 @@ jobs:
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
-      - if: ${{ !cancelled() && inputs.youtube }}
+      - if: ${{ !cancelled() && (inputs.tiktok || inputs.youtube) }}
+        id: tt
         continue-on-error: true
         run: python tiktok.py "$(echo $OUT | tr ':' '_').mp4"
         env:
@@ -44,11 +49,12 @@ jobs:
           TT_AUDITED: ${{ vars.TT_AUDITED }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - if: ${{ !cancelled() && inputs.reels }}
+        id: ig
         run: python reel.py "$(echo $OUT | tr ':' '_').mp4"
         env:
           IG_TOKEN: ${{ secrets.IG_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - if: ${{ !cancelled() && steps.yt.outcome == 'success' && (startsWith(inputs.spec, 'auto') || startsWith(inputs.spec, 'card')) }}
+      - if: ${{ !cancelled() && (steps.yt.outcome == 'success' || steps.tt.outcome == 'success' || steps.ig.outcome == 'success') && (startsWith(inputs.spec, 'auto') || startsWith(inputs.spec, 'card')) }}
         run: |
           git config user.name "ummati-bot"
           git config user.email "bot@users.noreply.github.com"
