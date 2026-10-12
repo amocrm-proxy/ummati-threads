@@ -75,15 +75,28 @@ def publish(path):
     privacy = "PUBLIC_TO_EVERYONE" if os.environ.get("TT_AUDITED") == "1" and "PUBLIC_TO_EVERYONE" in opts else "SELF_ONLY"
     title = (m["title"].replace(" #shorts", "") + "\n\n" + m["description"].replace("#shorts", "#tiktok #fyp"))[:2150]
     size = os.path.getsize(path)
-    d = api("post/publish/video/init/", tok, {
-        "post_info": {"title": title, "privacy_level": privacy, "disable_duet": False,
-                      "disable_comment": False, "disable_stitch": False, "video_cover_timestamp_ms": 1500},
-        "source_info": {"source": "FILE_UPLOAD", "video_size": size, "chunk_size": size, "total_chunk_count": 1}})
+    src = {"source": "FILE_UPLOAD", "video_size": size, "chunk_size": size, "total_chunk_count": 1}
+    inbox = False
+    try:
+        d = api("post/publish/video/init/", tok, {
+            "post_info": {"title": title, "privacy_level": privacy, "disable_duet": False,
+                          "disable_comment": False, "disable_stitch": False, "video_cover_timestamp_ms": 1500},
+            "source_info": src})
+    except RuntimeError as e:
+        if "unaudited_client" not in str(e):
+            raise
+        # до аудита TikTok не даёт публиковать в открытый аккаунт — кладём ролик в черновики (входящие) TikTok,
+        # владелец публикует его из приложения одним нажатием
+        print("TikTok: приложение ещё не прошло аудит — отправляю ролик в черновики TikTok")
+        d = api("post/publish/inbox/video/init/", tok, {"source_info": src}); inbox = True
     req(d["upload_url"], data=open(path, "rb").read(), method="PUT", raw=True,
         headers={"Content-Type": "video/mp4", "Content-Length": str(size), "Content-Range": f"bytes 0-{size - 1}/{size}"})
     for _ in range(40):                           # TikTok обрабатывает видео — ждём до ~7 минут
         time.sleep(10)
         st = api("post/publish/status/fetch/", tok, {"publish_id": d["publish_id"]})
+        if inbox and st.get("status") in ("SEND_TO_USER_INBOX", "PUBLISH_COMPLETE"):
+            print("TikTok: ролик в черновиках — откройте уведомление в приложении TikTok и нажмите «Опубликовать».",
+                  "Подпись:", title[:150]); return
         if st.get("status") == "PUBLISH_COMPLETE":
             print("TikTok опубликован:", d["publish_id"], "| доступ:", privacy, "| ник:", info.get("creator_username")); return
         if st.get("status") == "FAILED":
