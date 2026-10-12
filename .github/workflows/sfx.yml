@@ -1,0 +1,27 @@
+name: SFX
+on:
+  workflow_dispatch:
+  push:
+    paths: [".github/workflows/sfx.yml"]
+permissions:
+  contents: write
+jobs:
+  sfx:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Скачать звуки BigSoundBank (CC0)
+        run: |
+          mkdir -p sfx
+          # id:имя — все звуки помечены на сайте «CC0 (public domain): Free and royalty-free»
+          for p in 2762:city 3576:birds_city 1713:street_small 0514:steps_concrete 1318:run_concrete 0606:steps_stone_stairs \
+                   0137:leaves_steps 1045:ball_rebounds 0584:tennis_bounce 3241:tear_paper 0018:tear_paper2 \
+                   1405:sigh_mouth 1404:sigh_nose 1103:breathless_man 2195:man_breathing 1114:apple_bite 0576:bag_floor; do
+            id=${p%%:*}; n=${p#*:}
+            curl -sfL -A "Mozilla/5.0" -o "sfx/${n}.mp3" "https://bigsoundbank.com/UPLOAD/mp3/${id}.mp3" && echo "ok $n" || echo "FAIL $n"
+            echo "${n}.mp3 — BigSoundBank #${id} (Joseph Sardin), CC0" >> sfx/SOURCES.txt
+          done
+          ls -la sfx
+      - run: |
+          git config user.name "ummati-bot"; git config user.email "bot@users.noreply.github.com"
+          git add sfx && git commit -m "sfx: звуки CC0 для мультсериала" && git pull --rebase --autostash && git push || echo "нечего коммитить"
