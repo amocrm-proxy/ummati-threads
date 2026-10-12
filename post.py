@@ -98,15 +98,32 @@ subprocess.run([sys.executable, "ig.py"], env=dict(os.environ, SLOT=("dry:" if d
 schedule = json.load(open("schedule.json", encoding="utf-8"))
 post = schedule.get(slot)
 used = json.load(open("used.json", encoding="utf-8")) if os.path.exists("used.json") else {}
+if not dry:                                       # Telegram-бот: забираем голосовые для рубрики «Размышление»
+    try:
+        import tg
+        tg.run(put_file, datetime.datetime.now(ZoneInfo("Asia/Almaty")))
+    except BaseException as e:
+        print("Telegram:", e)
 yt_key = f"yt {slot[:13]}"
 if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # YouTube Shorts 5 раз в день (+ Reels в 18:00)
     try:
-        inputs = {"spec": f"auto:{slot[:13]}", "youtube": "true", "reels": "true" if hour == 18 else "false"}
+        spec, vref = f"auto:{slot[:13]}", None
+        if hour == 18:                                # в 18:00 — ролик с голосом автора, если он записан
+            try:
+                import tg
+                vref = tg.next_voice()
+            except BaseException as e:
+                print("Telegram:", e)
+            if vref:
+                spec = f"voice:{vref}"
+        inputs = {"spec": spec, "youtube": "true", "reels": "true" if hour == 18 else "false"}
         urllib.request.urlopen(urllib.request.Request(
             f"https://api.github.com/repos/{REPO}/actions/workflows/video.yml/dispatches", method="POST", headers=GH_HDR,
             data=json.dumps({"ref": "main", "inputs": inputs}).encode()), timeout=30)
         used[yt_key] = "yt"
         put_file("used.json", json.dumps(used, ensure_ascii=False, indent=1).encode(), yt_key)
+        if vref:
+            tg.mark_used(vref, put_file)
         print("YouTube Shorts: сборка запущена", inputs)
     except BaseException as e:
         print("YouTube Shorts: не удалось запустить:", e)
@@ -118,7 +135,17 @@ from render import render
 import content as C
 
 pointer = None                                    # (ключ в used.json, новое значение) — двигаем только после публикации
-if post:                                          # ручной пост из schedule.json
+ready = None                                      # готовые картинки (рубрика «Аят и наука»)
+import science as S
+sci = S.entry(slot) if hour == S.HOUR and not post else None
+if sci:                                           # 12:00 — «Аят и наука» (та же карусель, что в Instagram)
+    got = S.build(sci)
+    if not got:
+        sys.exit("Не удалось получить перевод Кулиева — пропускаю час, ничего не публикую")
+    ready, _, text = got
+    cards = [("Аят и наука", "", "", "")]
+    print("Аят и наука:", sci["refs"])
+elif post:                                          # ручной пост из schedule.json
     cards = [] if post.get("image") else [(post["quote"], post["source"], post.get("explain", ""), "СЛОВА ВСЕВЫШНЕГО")]
     text = post.get("text") or post.get("explain", "")
 elif hour % 2 == 0:                               # чётный час — следующий аят Корана по порядку
@@ -139,6 +166,14 @@ else:                                             # нечётный час — 
 
 if post and post.get("image"):
     paths = [post["image"]]
+elif ready:
+    paths = []
+    for i, img in enumerate(ready, 1):
+        buf = io.BytesIO(); img.save(buf, "JPEG", quality=90)
+        path = f"cards/{slot.replace(':', '-')}_{i}.jpg"
+        put_file(path, buf.getvalue(), f"card {path}")
+        paths.append(path)
+    time.sleep(5)
 else:
     paths = []
     for i, (q, src, ex, kicker) in enumerate(cards[:20], 1):

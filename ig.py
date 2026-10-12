@@ -2,7 +2,7 @@
 1) Если в ig_schedule.json есть публикации на этот час — публикует их (готовые картинки).
 2) Иначе сам собирает и рисует публикацию по плану дня:
    08 — сторис: следующий аят Корана по порядку, 14 — сторис: следующий хадис (hadiths.json),
-   19 — карусель (через день: аят / польза или товар), 21 — сторис-акция с фото.
+   12 — карусель «Аят и наука» (science.py), 19 — карусель (через день: аят / польза или товар), 21 — сторис-акция с фото.
    Все банки идут по кругу. SLOT=dry:... — нарисовать и загрузить без публикации."""
 import json, os, sys, io, time, datetime, subprocess, urllib.request, urllib.parse, urllib.error, base64
 from zoneinfo import ZoneInfo
@@ -160,6 +160,12 @@ def auto_item(slot, used):
         PENDING["igh_next"] = k + 1
         return "stories", [R.text_slide("emer", "Хадис", quote=q, source=src, body=ex, story=True)
                            for q, src, ex, _ in cards], ""
+    if h == 12:                                  # «Аят и наука» — карусель (science.json по кругу)
+        import science
+        e = science.entry(slot)
+        got = science.build(e) if e else None
+        if not got: return None
+        return "carousel", got[0], got[1]
     if h == 21:
         ph, t, b = C["promos"][d % len(C["promos"])]
         return "story", [R.photo_slide(P + ph, t, b, story=True, footer="Пишите в директ", kicker="ummati")], ""
@@ -209,7 +215,7 @@ def main():
             except Exception as e:
                 print("IG ОШИБКА", key, e)
         return
-    if int(slot[11:13]) not in (8, 14, 19, 21):
+    if int(slot[11:13]) not in (8, 12, 14, 19, 21):
         return
     key = f"ig auto {slot}"
     if key in used and not dry:
