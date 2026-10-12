@@ -54,7 +54,7 @@ def run(put_file, now):
         st["offset"] = u["update_id"] + 1; changed = True
         msg = u.get("message") or {}
         chat = msg.get("chat", {}).get("id")
-        if st["owner"] is None and msg.get("text", "").startswith("/start"):
+        if st["owner"] is None and chat and msg.get("chat", {}).get("type") == "private":   # первый написавший = владелец
             st["owner"] = chat
             send_week(st); st["week"] = now.strftime("%G-%V")
             continue
