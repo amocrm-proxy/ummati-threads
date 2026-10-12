@@ -35,6 +35,14 @@ jobs:
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+      - if: ${{ !cancelled() && inputs.youtube }}
+        continue-on-error: true
+        run: python tiktok.py "$(echo $OUT | tr ':' '_').mp4"
+        env:
+          TT_CLIENT_KEY: ${{ secrets.TT_CLIENT_KEY }}
+          TT_CLIENT_SECRET: ${{ secrets.TT_CLIENT_SECRET }}
+          TT_AUDITED: ${{ vars.TT_AUDITED }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - if: ${{ !cancelled() && inputs.reels }}
         run: python reel.py "$(echo $OUT | tr ':' '_').mp4"
         env:

@@ -1,0 +1,19 @@
+name: TikTok auth
+on:
+  workflow_dispatch:
+    inputs:
+      code:
+        description: "Код со страницы tiktok-callback.html"
+        required: true
+permissions:
+  contents: write
+jobs:
+  auth:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python tiktok.py --auth "${{ inputs.code }}"
+        env:
+          TT_CLIENT_KEY: ${{ secrets.TT_CLIENT_KEY }}
+          TT_CLIENT_SECRET: ${{ secrets.TT_CLIENT_SECRET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
