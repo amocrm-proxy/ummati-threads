@@ -12,10 +12,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Скачать звуки BigSoundBank (CC0)
         run: |
-          mkdir -p sfx
+          mkdir -p sfx; rm -f sfx/SOURCES.txt
           # id:имя — все звуки помечены на сайте «CC0 (public domain): Free and royalty-free»
           for p in 2762:city 3576:birds_city 1713:street_small 0514:steps_concrete 1318:run_concrete 0606:steps_stone_stairs \
                    0137:leaves_steps 1045:ball_rebounds 0584:tennis_bounce 3241:tear_paper 0018:tear_paper2 \
+                   2713:forest_stream 0904:wind_trees 0823:small_stream 2749:forest 1019:summer_rain 0621:night_rain \
                    1405:sigh_mouth 1404:sigh_nose 1103:breathless_man 2195:man_breathing 1114:apple_bite 0576:bag_floor; do
             id=${p%%:*}; n=${p#*:}
             curl -sfL -A "Mozilla/5.0" -o "sfx/${n}.mp3" "https://bigsoundbank.com/UPLOAD/mp3/${id}.mp3" && echo "ok $n" || echo "FAIL $n"
