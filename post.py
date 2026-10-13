@@ -112,10 +112,13 @@ if not dry:                                       # Telegram-бот: забир�
     except BaseException as e:
         print("Telegram:", e)
 yt_key = f"yt {slot[:13]}"
-if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # YouTube Shorts 5 раз в день (+ Reels в 18:00)
+VOICE = False                                     # ролики с голосом автора — пока не используем
+if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # Shorts/TikTok 5 раз в день (+ Reels в 12, 18 и 21)
     try:
-        spec, vref = (f"card:{slot[:13]}" if hour in (12, 21) else f"auto:{slot[:13]}"), None   # 12 и 21 — «Сильный аят»
-        if hour == 18:                                # в 18:00 — ролик с голосом автора, если он записан
+        # 09 и 18 — отрывок Корана по порядку, 12 — «Сильный аят», 15 и 21 — «Хадис дня»
+        kind = {12: "card", 15: "hadith", 21: "hadith"}.get(hour, "auto")
+        spec, vref = f"{kind}:{slot[:13]}", None
+        if hour == 18 and VOICE:                      # в 18:00 — ролик с голосом автора, если он записан (пока выключено)
             try:
                 import tg
                 vref = tg.next_voice()
@@ -123,8 +126,8 @@ if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # YouTube S
                 print("Telegram:", e)
             if vref:
                 spec = f"voice:{vref}"
-        YOUTUBE = False                               # пауза: Content ID блокирует чтение Алафаси (12/10/2026) — до смены звука
-        inputs = {"spec": spec, "youtube": "true" if YOUTUBE or spec.startswith("voice") else "false", "reels": "true" if hour == 18 else "false", "tiktok": "true"}
+        YOUTUBE = True                                # Алафаси убран (Content ID), чтецы: Хусари / Айюб / Абдуль-Басит
+        inputs = {"spec": spec, "youtube": "true" if YOUTUBE or spec.startswith("voice") else "false", "reels": "true" if hour in (12, 18, 21) else "false", "tiktok": "true"}
         urllib.request.urlopen(urllib.request.Request(
             f"https://api.github.com/repos/{REPO}/actions/workflows/video.yml/dispatches", method="POST", headers=GH_HDR,
             data=json.dumps({"ref": "main", "inputs": inputs}).encode()), timeout=30)
@@ -143,6 +146,9 @@ from render import render
 import content as C
 
 pointer = None                                    # (ключ в used.json, новое значение) — двигаем только после публикации
+# тест форматов: 12 часов в сутки — картинка, 12 — чистый текст (пары часов: 0–1 картинка, 2–3 текст, 4–5 картинка…)
+TEXT_HOUR = (hour // 2) % 2 == 1
+plain = None                                      # текст для текстового поста (≤ 500 знаков), иначе — картинка
 ready = None                                      # готовые картинки (рубрика «Аят и наука»)
 import science as S
 sci = S.entry(slot) if hour == S.HOUR and not post else None
@@ -164,15 +170,33 @@ elif hour % 2 == 0:                               # чётный час — сл
     cards, text, ref = got
     pointer = ("q_next", n + 1)
     print("Аят", n, ref)
+    if TEXT_HOUR:                                 # текстовый пост: аят целиком, дословно, если влезает
+        a = C.ayah((n - 1) % C.TOTAL_AYAHS + 1)
+        if a:
+            plain = f"«{a[2]}»\n\nКоран, сура «{C.NAMES[a[0] - 1]}», аят {a[1]}. Перевод смыслов Э. Кулиева."
 else:                                             # нечётный час — следующий хадис
     H = C.hadiths()
     k = int(used.get("h_next", 0))
     h = H[k % len(H)]
     cards, text = C.hadith_cards(h)
     pointer = ("h_next", k + 1)
+    if TEXT_HOUR:                                 # текстовый пост: ближайший хадис, который целиком влезает в 490 знаков
+        for j in range(k, k + 40):
+            hj = H[j % len(H)]
+            intro, body = C.hadith_parts(hj)
+            attr = hj.get("attr", ""); attr = attr[:1].upper() + attr[1:]
+            t = (intro + "\n\n" if intro else "") + (f"«{body}»" if intro else body) + \
+                f"\n\n{attr}. {hj.get('grade') or 'Хадис'}."
+            if len(t) <= 490:
+                plain, pointer = t, ("h_next", j + 1)
+                print("Хадис текстом", j, hj["id"]); break
     print("Хадис", k, h["id"])
 
-if post and post.get("image"):
+if plain and len(plain) > 490:                    # длинный аят/хадис — Threads не пустит, публикуем картинкой
+    print("Текст длиннее 490 знаков — публикую картинкой"); plain = None
+if plain:
+    paths, cards = [], [(plain[:60], "", "", "ТЕКСТ")]
+elif post and post.get("image"):
     paths = [post["image"]]
 elif ready:
     paths = []
@@ -195,10 +219,12 @@ else:
 urls = [f"https://raw.githubusercontent.com/{REPO}/main/{urllib.parse.quote(p)}" for p in paths]
 print("CARDS:", [c[0][:60] for c in cards])
 if dry:
-    print("DRY", urls, "\n", text)
+    print("DRY", urls, "\n", plain or text)
     sys.exit(0)
 user_id = threads("GET", "me", fields="id")["id"]
-if len(urls) == 1:
+if plain:
+    container = threads("POST", f"{user_id}/threads", media_type="TEXT", text=plain)
+elif len(urls) == 1:
     container = threads("POST", f"{user_id}/threads", media_type="IMAGE", image_url=urls[0], text=text)
 else:
     kids = [threads("POST", f"{user_id}/threads", media_type="IMAGE", image_url=u, is_carousel_item="true")["id"] for u in urls]
