@@ -2,7 +2,7 @@
 Запуск: python video.py 112            -> сура целиком
         python video.py 2:255          -> один аят
         python video.py 103:1-3        -> диапазон
-Текст: alquran.cloud (quran-uthmani + ru.kuliev), чтение: Мишари Афаси (cdn.islamic.network).
+Текст: alquran.cloud (quran-uthmani + ru.kuliev), чтение: cdn.islamic.network (чтец — READER, Алафаси не берём: Content ID).
 OFFLINE=dir — взять текст из dir/text.json и тишину вместо чтения (для проверки дизайна)."""
 import json, os, sys, subprocess, urllib.request, io, math
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -18,6 +18,9 @@ NAMES = ["Аль-Фатиха", "Аль-Бакара", "Али Имран", "А�
 SURAS = ["112", "113", "114", "1", "103", "108", "110", "106", "105", "107", "111", "109", "102", "104", "95", "94", "97", "99", "100", "101", "2:255"]
 PHOTOS = ["green_tex.jpg", "brown_tex.jpg", "L1033130.jpg"]
 START = "2026-10-11"
+READERS = {"ar.husary": "Махмуд Халиль аль-Хусари", "ar.abdulsamad": "Абдуль-Басит Абдус-Самад",
+           "ar.muhammadayyoub": "Мухаммад Айюб"}
+READER = "ar.husary"                          # 09:00 — Хусари, 18:00 — Абдуль-Басит (см. __main__)
 
 COUNTS = [7, 286, 200, 176, 120, 165, 206, 75, 129, 109, 123, 111, 43, 52, 99, 128, 111, 110, 98, 135, 112, 78, 118, 64, 77, 227, 93, 88, 69, 60, 34, 30, 73, 54, 45, 83, 182, 88, 75, 85, 54, 53, 89, 59, 37, 35, 38, 29, 18, 45, 60, 49, 62, 55, 78, 96, 29, 22, 24, 13, 14, 11, 11, 18, 12, 12, 30, 52, 52, 44, 28, 28, 20, 56, 40, 31, 50, 40, 46, 42, 29, 19, 36, 25, 22, 17, 19, 26, 30, 20, 15, 21, 11, 8, 8, 19, 5, 8, 8, 11, 11, 8, 3, 9, 5, 4, 7, 3, 6, 3, 5, 4, 5, 6]
 
@@ -81,7 +84,7 @@ def audio(nums, work):
             subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
                             "-t", str(dur), f], check=True)
         else:
-            open(f, "wb").write(get(f"https://cdn.islamic.network/quran/audio/128/ar.alafasy/{n}.mp3"))
+            open(f, "wb").write(get(f"https://cdn.islamic.network/quran/audio/{64 if READER == 'ar.abdulsamad' else 128}/{READER}/{n}.mp3"))
         p = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", f],
                            capture_output=True, text=True, check=True)
         files.append(f); durs.append(float(p.stdout.strip()))
@@ -297,7 +300,7 @@ def build(spec, photo, out, offer=("Намазные коврики ummati", "А
     except Exception as e:
         print("тафсир:", e)
     meta = {"title": f"{title}{part} — " + ("размышление и чтение" if voice else "чтение и перевод смыслов") + " #shorts",
-            "description": " ".join(ru) + f"\n\nКоран, {ref}. Перевод смыслов: Э. Кулиев. Чтец: Мишари Рашид аль-Афаси.\n\n" + smysl +
+            "description": " ".join(ru) + f"\n\nКоран, {ref}. Перевод смыслов: Э. Кулиев. Чтец: {READERS[READER]}.\n\n" + smysl +
                            "Ummati — намазные коврики. Акция 1+1: 2 коврика за 9 900 ₸, вода Зам-Зам, тасбих и подарочная упаковка в комплекте. "
                            "Instagram: @ummati.family\n\n#коран #ислам #намаз #сура #shorts"}
     json.dump(meta, open(out.rsplit(".", 1)[0] + ".json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
@@ -317,10 +320,15 @@ if __name__ == "__main__":
         ref = spec[6:]
         print("Готово:", out, f"{card.build_voice(ref, os.path.join(HERE, 'voices', ref.replace(':', '_') + '.ogg'), out):.1f} c")
         sys.exit(0)
+    elif spec.startswith("hadith"):                     # hadith:… -> «Хадис дня»: текст хадиса + звуки природы
+        import hadith_video
+        print("Готово:", out, f"{hadith_video.build(out):.1f} c"); sys.exit(0)
     elif spec.startswith("card"):                       # card:… -> «Сильный аят»: картинка + чтение (card.py)
         import card
         print("Готово:", out, f"{card.build(out):.1f} c"); sys.exit(0)
     elif spec.startswith("auto"):
+        if spec[16:18] == "18":                         # auto:2026-10-13T18 — вечерний отрывок читает Абдуль-Басит
+            READER = "ar.abdulsamad"
         spec, photo = auto_spec(spec[5:] or None)
         print("Сегодня:", spec, photo)
     print("Готово:", out, f"{build(spec, photo, out, voice=voice):.1f} c")

@@ -1,4 +1,4 @@
-"""Shorts «Сильный аят»: одна картинка 10–20 секунд + чтение Мишари Афаси.
+"""Shorts «Сильный аят»: одна картинка 10–20 секунд + чтение Мухаммада Айюба (Алафаси не берём: Content ID).
 Аяты — целые аяты из bank.json по кругу (card_state.json), только короткие (перевод до ~190 знаков).
 Текст — дословно перевод Кулиева из alquran.cloud, своими словами не пишем.
 python card.py out.mp4   (вызывается из video.py для spec «card»)"""
@@ -80,7 +80,7 @@ def build(out):
     work = out.rsplit(".", 1)[0] + "_card"
     os.makedirs(work, exist_ok=True)
     mp3 = os.path.join(work, "a.mp3")
-    with urllib.request.urlopen(f"https://cdn.islamic.network/quran/audio/128/ar.alafasy/{num}.mp3", timeout=60) as r:
+    with urllib.request.urlopen(f"https://cdn.islamic.network/quran/audio/128/ar.muhammadayyoub/{num}.mp3", timeout=60) as r:
         open(mp3, "wb").write(r.read())
     dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", mp3],
                                capture_output=True, text=True, check=True).stdout.strip())
@@ -104,7 +104,7 @@ def build(out):
     short = text if len(text) <= 70 else text[:text.rfind(" ", 0, 66)].rstrip(",;:—-") + "…"
     meta = {"title": f"«{short}» — Коран {s}:{a} #shorts",
             "description": f"«{text}»\n\nКоран, сура «{C.NAMES[s - 1]}», аят {a}. Перевод смыслов: Э. Кулиев. "
-                           "Чтец: Мишари Рашид аль-Афаси.\n\n" + smysl +
+                           "Чтец: Мухаммад Айюб.\n\n" + smysl +
                            "Ummati — намазные коврики. Акция 1+1: 2 коврика за 9 900 ₸, вода Зам-Зам, тасбих и подарочная упаковка в комплекте. "
                            "Instagram: @ummati.family\n\n#коран #ислам #аят #намаз #shorts"}
     json.dump(meta, open(out.rsplit(".", 1)[0] + ".json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
