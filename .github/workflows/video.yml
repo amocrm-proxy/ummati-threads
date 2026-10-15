@@ -54,14 +54,14 @@ jobs:
         env:
           IG_TOKEN: ${{ secrets.IG_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - if: ${{ !cancelled() && (steps.yt.outcome == 'success' || steps.tt.outcome == 'success' || steps.ig.outcome == 'success') && (startsWith(inputs.spec, 'auto') || startsWith(inputs.spec, 'card') || startsWith(inputs.spec, 'hadith')) }}
+      - if: ${{ !cancelled() && (steps.yt.outcome == 'success' || steps.tt.outcome == 'success' || steps.ig.outcome == 'success') && (startsWith(inputs.spec, 'auto') || startsWith(inputs.spec, 'card') || startsWith(inputs.spec, 'hadith') || startsWith(inputs.spec, 'support')) }}
         run: |
           git config user.name "ummati-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add yt_state.json $(ls card_state.json hadith_state.json 2>/dev/null)
+          git add yt_state.json $(ls card_state.json hadith_state.json support_state.json 2>/dev/null)
           git commit -m "yt_state"
           for i in 1 2 3; do git pull --rebase --autostash -q && git push && break; sleep 5; done
-      - if: ${{ !startsWith(inputs.spec, 'auto') && !startsWith(inputs.spec, 'voice') && !startsWith(inputs.spec, 'card') && !startsWith(inputs.spec, 'hadith') }}
+      - if: ${{ !startsWith(inputs.spec, 'auto') && !startsWith(inputs.spec, 'voice') && !startsWith(inputs.spec, 'card') && !startsWith(inputs.spec, 'hadith') && !startsWith(inputs.spec, 'support') }}
         run: |
           git config user.name "ummati-bot"
           git config user.email "bot@users.noreply.github.com"
