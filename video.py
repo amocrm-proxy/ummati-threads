@@ -320,6 +320,22 @@ if __name__ == "__main__":
         ref = spec[6:]
         print("Готово:", out, f"{card.build_voice(ref, os.path.join(HERE, 'voices', ref.replace(':', '_') + '.ogg'), out):.1f} c")
         sys.exit(0)
+    elif spec.startswith("support"):                    # support:… -> «Слова поддержки»: аят (с чтением) или хадис утешения
+        import support, card, hadith_video
+        stf = os.path.join(HERE, "support_state.json")
+        k = json.load(open(stf)).get("i", 0) if os.path.exists(stf) else 0
+        for j in range(k, k + 10):                      # берём ближайший, который помещается на экран
+            x = support.item(j)
+            if not x:
+                continue
+            if x[0] == "ayah" and len(x[3]) <= 300:
+                total = card.build(out, given=x[1:], kicker=support.KICKER); break
+            if x[0] == "hadith" and sum(map(len, support.C.hadith_parts(x[1]))) <= 400:
+                total = hadith_video.build(out, h=x[1], kicker=support.KICKER, idx=j); break
+        else:
+            raise SystemExit("Нет подходящего текста для «Слов поддержки»")
+        json.dump({"i": j + 1}, open(stf, "w"))
+        print("Готово:", out, f"{total:.1f} c"); sys.exit(0)
     elif spec.startswith("hadith"):                     # hadith:… -> «Хадис дня»: текст хадиса + звуки природы
         import hadith_video
         print("Готово:", out, f"{hadith_video.build(out):.1f} c"); sys.exit(0)

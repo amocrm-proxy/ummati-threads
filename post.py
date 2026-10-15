@@ -115,8 +115,12 @@ yt_key = f"yt {slot[:13]}"
 VOICE = False                                     # ролики с голосом автора — пока не используем
 if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # Shorts/TikTok 5 раз в день (+ Reels в 12, 18 и 21)
     try:
-        # 09 и 18 — отрывок Корана по порядку, 12 — «Сильный аят», 15 и 21 — «Хадис дня»
-        kind = {12: "card", 15: "hadith", 21: "hadith"}.get(hour, "auto")
+        # по кругу аят → хадис → слова поддержки (сквозной счёт роликов с 15/10/2026);
+        # аят в 09 и 18 — отрывок Корана по порядку, в остальное время — «Сильный аят»
+        n = (datetime.date.fromisoformat(slot[:10]) - datetime.date(2026, 10, 15)).days * 5 + (9, 12, 15, 18, 21).index(hour)
+        kind = ["ayah", "hadith", "support"][n % 3]
+        if kind == "ayah":
+            kind = "auto" if hour in (9, 18) else "card"
         spec, vref = f"{kind}:{slot[:13]}", None
         if hour == 18 and VOICE:                      # в 18:00 — ролик с голосом автора, если он записан (пока выключено)
             try:
@@ -162,7 +166,7 @@ if sci:                                           # 12:00 — «Аят и нау
 elif post:                                          # ручной пост из schedule.json
     cards = [] if post.get("image") else [(post["quote"], post["source"], post.get("explain", ""), "СЛОВА ВСЕВЫШНЕГО")]
     text = post.get("text") or post.get("explain", "")
-elif hour % 2 == 0:                               # чётный час — следующий аят Корана по порядку
+elif hour % 3 == 0:                               # аят → хадис → слова поддержки по кругу: 0, 3, 6… — аят Корана по порядку
     n = int(used.get("q_next", 1))
     got = C.ayah_cards((n - 1) % C.TOTAL_AYAHS + 1)
     if not got:
@@ -174,7 +178,7 @@ elif hour % 2 == 0:                               # чётный час — сл
         a = C.ayah((n - 1) % C.TOTAL_AYAHS + 1)
         if a:
             plain = f"«{a[2]}»\n\nКоран, сура «{C.NAMES[a[0] - 1]}», аят {a[1]}. Перевод смыслов Э. Кулиева."
-else:                                             # нечётный час — следующий хадис
+elif hour % 3 == 1:                               # 1, 4, 7… — следующий хадис
     H = C.hadiths()
     k = int(used.get("h_next", 0))
     h = H[k % len(H)]
@@ -191,6 +195,17 @@ else:                                             # нечётный час — 
                 plain, pointer = t, ("h_next", j + 1)
                 print("Хадис текстом", j, hj["id"]); break
     print("Хадис", k, h["id"])
+else:                                             # 2, 5, 8… — «Слова поддержки» (аяты и хадисы утешения, дословно)
+    import support as SP
+    k = int(used.get("s_next", 0))
+    x = SP.item(k)
+    if not x:
+        sys.exit("Не удалось получить текст для «Слов поддержки» — пропускаю час")
+    cards, text = SP.cards(x)
+    pointer = ("s_next", k + 1)
+    if TEXT_HOUR:
+        plain = SP.plain(x)
+    print("Поддержка", k, x[0])
 
 if plain and len(plain) > 490:                    # длинный аят/хадис — Threads не пустит, публикуем картинкой
     print("Текст длиннее 490 знаков — публикую картинкой"); plain = None

@@ -74,9 +74,13 @@ def card_image(text, s, a, photo, kicker=None):
     img.alpha_composite(lg, ((w - lg.width) // 2, dy + 1650))
     return img.convert("RGB")
 
-def build(out):
-    ref, text, num, s, a, idx = pick()
-    print("Сильный аят:", ref, text)
+def build(out, given=None, kicker=None):
+    """given=(сура, аят, текст Кулиева, сквозной номер) — конкретный аят (рубрика «Слова поддержки»), иначе следующий из bank.json."""
+    if given:
+        s, a, text, num = given; idx = a
+    else:
+        ref, text, num, s, a, idx = pick()
+    print("Аят:", f"{s}:{a}", text)
     work = out.rsplit(".", 1)[0] + "_card"
     os.makedirs(work, exist_ok=True)
     mp3 = os.path.join(work, "a.mp3")
@@ -86,7 +90,7 @@ def build(out):
                                capture_output=True, text=True, check=True).stdout.strip())
     total = max(10.0, dur + 2.0)
     png = os.path.join(work, "card.png")
-    card_image(text, s, a, PHOTOS[idx % len(PHOTOS)]).save(png)
+    card_image(text, s, a, PHOTOS[idx % len(PHOTOS)], kicker=kicker).save(png)
     frames = int(total * 30)
     vf = (f"zoompan=z='1+0.06*on/{frames}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={W}x{H}:fps=30,"
           f"fade=t=in:st=0:d=0.6,fade=t=out:st={total - 0.8:.2f}:d=0.8")

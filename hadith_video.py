@@ -29,7 +29,7 @@ def pick():
     json.dump({"i": i + 1}, open(STATE, "w"))
     return P[i % len(P)], i
 
-def image(h, photo):
+def image(h, photo, kicker="ХАДИС ДНЯ"):
     R.ensure_fonts()
     intro, body = C.hadith_parts(h)
     img = card.photo_bg(photo)
@@ -37,7 +37,7 @@ def image(h, photo):
     d = ImageDraw.Draw(img)
     dx, dy = (w - W) // 2, (hh - H) // 2
     fk = R.font("Montserrat_600SemiBold.ttf", 30)
-    k = "ХАДИС ДНЯ"
+    k = kicker
     tw = d.textlength(k, font=fk) + len(k) * 6
     x = (w - tw) / 2; y = dy + 420
     for ch in k:
@@ -72,15 +72,17 @@ def bed(idx):
         return None
     return os.path.join(HERE, "sfx", have[idx % len(have)] + ".mp3")
 
-def build(out):
-    h, idx = pick()
+def build(out, h=None, kicker="ХАДИС ДНЯ", idx=0):
+    """h — конкретный хадис (рубрика «Слова поддержки»), иначе следующий короткий по кругу."""
+    if h is None:
+        h, idx = pick()
     intro, body = C.hadith_parts(h)
     print("Хадис:", h["id"], body[:80])
-    total = max(10.0, min(24.0, (len(intro) + len(body)) / 13 + 3))
+    total = max(10.0, min(30.0, (len(intro) + len(body)) / 13 + 3))
     work = out.rsplit(".", 1)[0] + "_hadith"
     os.makedirs(work, exist_ok=True)
     png = os.path.join(work, "card.png")
-    image(h, card.PHOTOS[idx % len(card.PHOTOS)]).save(png)
+    image(h, card.PHOTOS[idx % len(card.PHOTOS)], kicker).save(png)
     frames = int(total * 30)
     vf = (f"zoompan=z='1+0.05*on/{frames}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s={W}x{H}:fps=30,"
           f"fade=t=in:st=0:d=0.6,fade=t=out:st={total - 0.8:.2f}:d=0.8")
