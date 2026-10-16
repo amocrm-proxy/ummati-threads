@@ -6,7 +6,7 @@ import content as C
 
 START = datetime.date(2026, 10, 14)
 HOUR = 12
-TAGS = "#коран #наука #ислам #аятинаука #ummati"
+TAGS = "#коран #наука #ислам #сура #жайнамаз #намазныековрики #аятинаука #ummati"
 
 def entry(slot):
     S = json.load(open("science.json", encoding="utf-8"))

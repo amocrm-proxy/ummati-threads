@@ -3,10 +3,15 @@ python reel.py videos/auto_2026-10-11T18.mp4"""
 import json, os, re, sys, time
 import ig
 
+BRAND_TAGS = "#коран #ислам #сура #жайнамаз #намазныековрики"   # на всех видео во всех соцсетях
+
 def tags_only(m):
-    """Подпись к видео — только хэштеги (текст уже есть в самом ролике)."""
-    if m.get("caption"): return m["caption"]
-    return " ".join(t for t in re.findall(r"#\w+", m.get("description", "")) if t != "#shorts")
+    """Подпись к видео — только хэштеги (текст уже есть в самом ролике): общие + тематические, без повторов."""
+    base = m.get("caption") or " ".join(t for t in re.findall(r"#\w+", m.get("description", "")) if t != "#shorts")
+    out = []
+    for t in (BRAND_TAGS + " " + base).split():
+        if t not in out: out.append(t)
+    return " ".join(out)
 
 def main(path):
     m = json.load(open(path.rsplit(".", 1)[0] + ".json", encoding="utf-8"))

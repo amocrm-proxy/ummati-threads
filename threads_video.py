@@ -2,10 +2,15 @@
 python threads_video.py videos/auto_2026-10-16T09.mp4"""
 import base64, json, os, re, sys, time, urllib.parse, urllib.request, urllib.error
 
+BRAND_TAGS = "#коран #ислам #сура #жайнамаз #намазныековрики"   # на всех видео во всех соцсетях
+
 def tags_only(m):
-    """Подпись к видео — только хэштеги (текст уже есть в самом ролике)."""
-    if m.get("caption"): return m["caption"]
-    return " ".join(t for t in re.findall(r"#\w+", m.get("description", "")) if t != "#shorts")
+    """Подпись к видео — только хэштеги (текст уже есть в самом ролике): общие + тематические, без повторов."""
+    base = m.get("caption") or " ".join(t for t in re.findall(r"#\w+", m.get("description", "")) if t != "#shorts")
+    out = []
+    for t in (BRAND_TAGS + " " + base).split():
+        if t not in out: out.append(t)
+    return " ".join(out)
 
 API = "https://graph.threads.net/v1.0"
 TOKEN = os.environ["THREADS_TOKEN"]

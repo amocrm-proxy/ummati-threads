@@ -121,7 +121,7 @@ def ayah_cards(n):
     src = f"Коран, {s}:{k}"
     cards = [(show(p, i, len(parts)), src + (f" · {i + 1}/{len(parts)}" if len(parts) > 1 else ""),
               f"Сура «{NAMES[s - 1]}». Перевод смыслов Э. Кулиева", "СЛОВА ВСЕВЫШНЕГО") for i, p in enumerate(parts)]
-    caption = f"Коран, сура «{NAMES[s - 1]}», аят {k}. Перевод смыслов Э. Кулиева.\n\n#коран #ислам #аят"
+    caption = f"Коран, сура «{NAMES[s - 1]}», аят {k}. Перевод смыслов Э. Кулиева.\n\n#коран #ислам #сура #аят #жайнамаз #намазныековрики"
     tc = tafsir_card(s, k)
     if tc:
         cards.append(tc)
@@ -152,5 +152,5 @@ def hadith_cards(h):
     attr = h.get("attr", ""); attr = attr[:1].upper() + attr[1:]
     cards = [(show(p, i, len(parts)), grade + (f" · {i + 1}/{len(parts)}" if len(parts) > 1 else ""),
               attr, "ХАДИС") for i, p in enumerate(parts)]
-    caption = ((intro + "\n\n") if intro else "") + f"{attr}. {grade}.\n\n#хадис #сунна #ислам"
+    caption = ((intro + "\n\n") if intro else "") + f"{attr}. {grade}.\n\n#хадис #сунна #коран #ислам #сура #жайнамаз #намазныековрики"
     return cards, caption[:490]

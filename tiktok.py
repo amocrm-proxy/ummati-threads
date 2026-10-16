@@ -8,10 +8,15 @@ python tiktok.py --auth КОД                      — первый вход: �
 После аудита: переменная репозитория TT_AUDITED=1 — и ролики станут публичными."""
 import base64, json, os, re, subprocess, sys, time, urllib.request, urllib.error
 
+BRAND_TAGS = "#коран #ислам #сура #жайнамаз #намазныековрики"   # на всех видео во всех соцсетях
+
 def tags_only(m):
-    """Подпись к видео — только хэштеги (текст уже есть в самом ролике)."""
-    if m.get("caption"): return m["caption"]
-    return " ".join(t for t in re.findall(r"#\w+", m.get("description", "")) if t != "#shorts")
+    """Подпись к видео — только хэштеги (текст уже есть в самом ролике): общие + тематические, без повторов."""
+    base = m.get("caption") or " ".join(t for t in re.findall(r"#\w+", m.get("description", "")) if t != "#shorts")
+    out = []
+    for t in (BRAND_TAGS + " " + base).split():
+        if t not in out: out.append(t)
+    return " ".join(out)
 
 API = "https://open.tiktokapis.com/v2"
 KEY = os.environ.get("TT_CLIENT_KEY", "").strip()

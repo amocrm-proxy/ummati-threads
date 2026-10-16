@@ -39,6 +39,6 @@ def cards(x):
         src = f"Коран, {s}:{a}"
         cs = [(C.show(p, i, len(parts)), src + (f" · {i + 1}/{len(parts)}" if len(parts) > 1 else ""),
                f"Сура «{C.NAMES[s - 1]}». Перевод смыслов Э. Кулиева", KICKER) for i, p in enumerate(parts)]
-        return cs, f"Коран, сура «{C.NAMES[s - 1]}», аят {a}. Перевод смыслов Э. Кулиева.\n\n#коран #поддержка #ислам"
+        return cs, f"Коран, сура «{C.NAMES[s - 1]}», аят {a}. Перевод смыслов Э. Кулиева.\n\n#коран #поддержка #ислам #сура #жайнамаз #намазныековрики"
     cs, cap = C.hadith_cards(x[1])
     return [(q, src, ex, KICKER) for q, src, ex, _ in cs], cap.replace("#хадис", "#хадис #поддержка")

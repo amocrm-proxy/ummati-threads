@@ -4,10 +4,15 @@ python yt.py videos/112.mp4 [public|unlisted|private]
 Пока проект Google не прошёл аудит, YouTube сам делает видео приватными."""
 import json, os, re, sys, urllib.request, urllib.parse, urllib.error
 
+BRAND_TAGS = "#коран #ислам #сура #жайнамаз #намазныековрики"   # на всех видео во всех соцсетях
+
 def tags_only(m):
-    """Подпись к видео — только хэштеги (текст уже есть в самом ролике)."""
-    if m.get("caption"): return m["caption"]
-    return " ".join(t for t in re.findall(r"#\w+", m.get("description", "")) if t != "#shorts")
+    """Подпись к видео — только хэштеги (текст уже есть в самом ролике): общие + тематические, без повторов."""
+    base = m.get("caption") or " ".join(t for t in re.findall(r"#\w+", m.get("description", "")) if t != "#shorts")
+    out = []
+    for t in (BRAND_TAGS + " " + base).split():
+        if t not in out: out.append(t)
+    return " ".join(out)
 
 def token():
     data = urllib.parse.urlencode({
