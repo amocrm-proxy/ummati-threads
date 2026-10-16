@@ -9,6 +9,7 @@ W, H, FPS = 1080, 1920, 30
 HERE = os.path.dirname(os.path.abspath(__file__))
 FD = os.environ.get("FONTS", os.path.join(HERE, "..", "fonts"))
 GOLD, CREAM, MUTED, EMER = (233, 190, 140), (246, 240, 230), (196, 206, 198), (60, 160, 120)
+THEME = None          # задаётся themes.pick(): свой фон/палитра/орнамент на каждый ролик
 
 def font(name, size):
     return ImageFont.truetype(os.path.join(FD, name), size)
@@ -131,8 +132,9 @@ class Item:
         base.alpha_composite(fade(self.img, a), (x, int(self.y + dy - self.img.height / 2)))
 
 # ---------- геометрия ----------
-def draw_rings(base, c, t, alpha, r0=170, n=3, color=GOLD):
+def draw_rings(base, c, t, alpha, r0=170, n=3, color=None):
     if alpha <= 0.01: return
+    color = color or GOLD
     lay = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(lay)
     for i in range(n):
         r = r0 + i * 46
@@ -146,8 +148,11 @@ def star_points(c, r, k=8, rot=-90):
     return [(c[0] + r * math.cos(math.radians(rot + i * 360 / k)), c[1] + r * math.sin(math.radians(rot + i * 360 / k))) for i in range(k)]
 
 def render(scene, out, dur, audio=None):
-    bg = Image.fromarray(make_background(), "RGB").convert("RGBA")
-    stars = Stars()
+    if THEME:
+        bg, stars = THEME["bg"], THEME["back"]
+    else:
+        bg = Image.fromarray(make_background(), "RGB").convert("RGBA")
+        stars = Stars()
     enc = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
                             "-r", str(FPS), "-i", "-", *(["-i", audio] if audio else []),
                             "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-pix_fmt", "yuv420p",
@@ -169,10 +174,10 @@ def render(scene, out, dur, audio=None):
 # ---------- v2: частицы, ударные кольца, проявление по словам ----------
 class Particles:
     """Частицы: burst — разлёт из точки, sink — медленное «осыпание» вниз, orbit — кружение вокруг центра."""
-    def __init__(self, n, seed, kind, center, t0, t1, color=GOLD, spread=420):
+    def __init__(self, n, seed, kind, center, t0, t1, color=None, spread=420):
         r = random.Random(seed)
         self.p = [(r.uniform(0, 6.283), r.uniform(0.3, 1.0), r.uniform(1.0, 3.2), r.uniform(-60, 60)) for _ in range(n)]
-        self.kind, self.c, self.t0, self.t1, self.col, self.spread = kind, center, t0, t1, color, spread
+        self.kind, self.c, self.t0, self.t1, self.col, self.spread = kind, center, t0, t1, color or GOLD, spread
     def draw(self, img, t):
         if t < self.t0 or t > self.t1: return
         u = (t - self.t0) / (self.t1 - self.t0)
@@ -191,7 +196,8 @@ class Particles:
             al = int(230 * a_all * (0.5 + 0.5 * sp))
             d.ellipse((x - sz, y - sz, x + sz, y + sz), fill=(*self.col, al))
 
-def shock(img, c, t, t0, color=GOLD, r1=330, dur=1.2, width=3):
+def shock(img, c, t, t0, color=None, r1=330, dur=1.2, width=3):
+    color = color or GOLD
     u = (t - t0) / dur
     if u < 0 or u > 1: return
     r = 40 + (r1 - 40) * ease(u); a = int(220 * (1 - u))

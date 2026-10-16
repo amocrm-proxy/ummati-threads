@@ -5,6 +5,7 @@ OFFLINE=1 — тишина вместо чтения и встроенные т�
 import json, math, os, random, subprocess, sys, urllib.request
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
 import motion as M
+import themes
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(HERE, "..")
@@ -78,6 +79,9 @@ def block_h(text, f, maxw, rtl=False, lh=1.3):
     n = len((M.wrap_rtl if rtl else M.wrap)(text, f, maxw, tmp))
     return int(f.size * lh * (1.35 if rtl else 1.0)) * n
 
+def intro_kind():
+    return M.THEME["intro"] if M.THEME else "converge"
+
 class Scene:
     """Общий фон кадра: свечение, кольца, частицы, ударные волны, узлы-созвездие."""
     def __init__(self, total, n_nodes=0, node_times=(), seed=1, glow=1.0):
@@ -87,9 +91,12 @@ class Scene:
         self.extra = []
     def __call__(self, img, t):
         g = self.glow
-        M.paste_alpha(img, self.orb, C, 0.85 * g, 1 + 0.05 * math.sin(t * 2.4))
-        M.paste_alpha(img, self.core, C, min(1, 0.4 + g))
-        M.draw_rings(img, C, t * 1.2, M.ease(t / 1.2) * 0.8)
+        if M.THEME: M.THEME["center"](img, C, t, g)
+        else:
+            M.paste_alpha(img, self.orb, C, 0.85 * g, 1 + 0.05 * math.sin(t * 2.4))
+            M.paste_alpha(img, self.core, C, min(1, 0.4 + g))
+        if M.THEME: themes.ornament(M.THEME["orn"], img, C, t * 1.2, M.ease(t / 1.2) * 0.8, M.GOLD)
+        else: M.draw_rings(img, C, t * 1.2, M.ease(t / 1.2) * 0.8)
         ang = math.radians(-90 + t * 36)
         M.paste_alpha(img, self.node, (C[0] + 300 * math.cos(ang), C[1] + 300 * math.sin(ang)), 0.8, 0.45)
         for p in self.parts: p.draw(img, t)
@@ -129,6 +136,7 @@ def end_card(sc, e0, total, title, sub, reader=None):
 
 # ---------------- аяты под чтение ----------------
 def ayahs(out, s, sura_name, a0, ar, ru, nums, reader, repeat=False, kicker=None):
+    themes.pick(out)
     work = out.rsplit(".", 1)[0] + "_m"; os.makedirs(work, exist_ok=True)
     files, durs = recitation(nums, reader, work)
     t = 1.4; placed, slots = [], []
@@ -146,7 +154,7 @@ def ayahs(out, s, sura_name, a0, ar, ru, nums, reader, repeat=False, kicker=None
     ref = f"{s}:{a0}" + (f"–{a0 + len(nums) - 1}" if len(nums) > 1 else "")
     sc.items += [M.Item(Tx(kicker or "ПОСЛУШАЙ ДО КОНЦА", M.SANS_B(34), M.GOLD, spacing=7), 1100, 0.0, 1.4 + 0.2, fin=0.3, fout=0.4),
                  M.Item(Tx(f"Сура «{sura_name}»", M.SERIF(96), M.CREAM, glow=6, maxw=980), 1220, 0.15, 1.6, fin=0.35, fout=0.4)]
-    sc.parts.append(M.Particles(150, 1, "converge", C, 0.0, 1.6, spread=700))
+    sc.parts.append(M.Particles(150, 1, intro_kind(), C, 0.0, 1.6, spread=700))
     sc.parts.append(M.Particles(130, 4, "orbit", C, 1.5, total - 2, spread=330))
     for p, i, st, en in slots:
         sc.shocks.append(st)
@@ -170,6 +178,7 @@ def ayahs(out, s, sura_name, a0, ar, ru, nums, reader, repeat=False, kicker=None
 
 # ---------------- хадис / слова поддержки без чтения ----------------
 def text_piece(out, kicker, intro, body, source, idx=0):
+    themes.pick(out)
     work = out.rsplit(".", 1)[0] + "_m"; os.makedirs(work, exist_ok=True)
     nw = len(body.split())
     t_intro = 1.6 if intro else 0.8
@@ -183,7 +192,7 @@ def text_piece(out, kicker, intro, body, source, idx=0):
     else: audio = None
     sc = Scene(total)
     Tx = M.text_block
-    sc.parts.append(M.Particles(150, 2, "converge", C, 0.0, 1.8, spread=700))
+    sc.parts.append(M.Particles(150, 2, intro_kind(), C, 0.0, 1.8, spread=700))
     sc.parts.append(M.Particles(130, 5, "orbit", C, 1.6, total - 2, spread=330))
     sc.shocks += [0.3, t_intro + 0.6]
     size = 60 if len(body) < 120 else 54 if len(body) < 220 else 48 if len(body) < 320 else 42
@@ -205,6 +214,7 @@ def text_piece(out, kicker, intro, body, source, idx=0):
 
 # ---------------- продажа коврика ----------------
 def sale(out, k=0):
+    themes.pick(out)
     work = out.rsplit(".", 1)[0] + "_m"; os.makedirs(work, exist_ok=True)
     cfg = json.load(open(os.path.join(ROOT, "ig_content.json"), encoding="utf-8"))
     off = cfg["offer"]
