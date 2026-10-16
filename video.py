@@ -315,6 +315,17 @@ if __name__ == "__main__":
     photo = sys.argv[2] if len(sys.argv) > 2 else "green_tex.jpg"
     out = sys.argv[3] if len(sys.argv) > 3 else "short.mp4"
     voice = None
+    if spec.split(":")[0] in ("auto", "card", "hadith", "support", "sale"):   # моушн-версии (motion/), при сбое — старые шаблоны
+        try:
+            import mvideo
+            print("Готово (моушн):", out, f"{mvideo.build(spec, out):.1f} c"); sys.exit(0)
+        except SystemExit:
+            raise
+        except Exception:
+            import traceback; traceback.print_exc()
+            print("Моушн не получился — собираю старым шаблоном")
+            if spec.startswith("sale"):
+                raise
     if spec.startswith("voice:"):                       # voice:2:286 -> карточка аята + голос автора (voices/2_286.ogg)
         import card
         ref = spec[6:]

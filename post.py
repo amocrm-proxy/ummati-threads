@@ -115,10 +115,10 @@ yt_key = f"yt {slot[:13]}"
 VOICE = False                                     # ролики с голосом автора — пока не используем
 if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # Shorts/TikTok 5 раз в день (+ Reels в 12, 18 и 21)
     try:
-        # по кругу аят → хадис → слова поддержки (сквозной счёт роликов с 15/10/2026);
+        # по кругу аят → хадис → поддержка → продажа коврика (сквозной счёт роликов с 15/10/2026);
         # аят в 09 и 18 — отрывок Корана по порядку, в остальное время — «Сильный аят»
         n = (datetime.date.fromisoformat(slot[:10]) - datetime.date(2026, 10, 15)).days * 5 + (9, 12, 15, 18, 21).index(hour)
-        kind = ["ayah", "hadith", "support"][n % 3]
+        kind = ["ayah", "hadith", "support", "sale"][n % 4]          # сура/аят → хадис → поддержка → коврик
         if kind == "ayah":
             kind = "auto" if hour in (9, 18) else "card"
         spec, vref = f"{kind}:{slot[:13]}", None
@@ -131,7 +131,7 @@ if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # Shorts/Ti
             if vref:
                 spec = f"voice:{vref}"
         YOUTUBE = True                                # Алафаси убран (Content ID), чтецы: Хусари / Айюб / Абдуль-Басит
-        inputs = {"spec": spec, "youtube": "true" if YOUTUBE or spec.startswith("voice") else "false", "reels": "true" if hour in (12, 18, 21) else "false", "tiktok": "true"}
+        inputs = {"spec": spec, "youtube": "true" if YOUTUBE or spec.startswith("voice") else "false", "reels": "true", "tiktok": "true", "threads": "true"}
         urllib.request.urlopen(urllib.request.Request(
             f"https://api.github.com/repos/{REPO}/actions/workflows/video.yml/dispatches", method="POST", headers=GH_HDR,
             data=json.dumps({"ref": "main", "inputs": inputs}).encode()), timeout=30)
