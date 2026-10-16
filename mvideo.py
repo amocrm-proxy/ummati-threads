@@ -92,7 +92,31 @@ def hadith_piece(out, h, kicker, tags):
 def hadith(out):
     import hadith_video
     h, _ = hadith_video.pick()
-    return hadith_piece(out, h, "ХАДИС", "#хадис #сунна #ислам #пророк #мусульмане #shorts")
+    try:
+        return hadith_light(out, h)
+    except Exception as e:                       # светлый стиль не собрался — тёмный моушн как раньше
+        print("Рукопись не собралась:", e)
+        return hadith_piece(out, h, "ХАДИС", "#хадис #сунна #ислам #пророк #мусульмане #shorts")
+
+def hadith_light(out, h):
+    """Светлый стиль «Рукопись» + обложка для Reels (<имя>_cover.jpg). Без номеров выпусков."""
+    import content as C, auto, light
+    intro, body = C.hadith_parts(h)
+    shown = f"«{body}»" if intro else body
+    attr = h.get("attr", ""); attr = attr[:1].upper() + attr[1:]
+    grade = h.get("grade") or "Хадис"
+    total = light.hadith(out, "ХАДИС", intro, shown, f"{attr} · {grade}", bed=auto.bed_file(int(h["id"]) % 7))
+    head = body if len(body) <= 48 else body[:body.rfind(" ", 0, 44)].rstrip(",;:—-") + "…"
+    try:
+        light.cover(out.rsplit(".", 1)[0] + "_cover.jpg", "ХАДИС", f"«{head}»" if intro else head, sub=attr.upper()[:40])
+    except Exception as e:
+        print("обложка:", e)
+    q = re.findall(r"[«“]([^«»“”]{15,})[»”]", body)
+    core = q[-1].strip() if q else body
+    short = core if len(core) <= 70 else core[:core.rfind(" ", 0, 66)].rstrip(",;:—-") + "…"
+    _meta(out, f"«{short}» — хадис #shorts" if (q or intro) else f"{short} — хадис #shorts",
+          "#хадис #сунна #ислам #пророк #мусульмане #shorts")
+    return total
 
 def support(out):
     import support as S

@@ -15,8 +15,20 @@ def main(path):
     time.sleep(10)
     tok = ig.page_token()
     caption = tags_only(m)
-    cid = ig.call("POST", f"{ig.IG_USER}/media", media_type="REELS", video_url=ig.url(name),
-                  caption=caption, share_to_feed="true", access_token=tok)["id"]
+    extra = {}
+    cov = path.rsplit(".", 1)[0] + "_cover.jpg"
+    if os.path.exists(cov):                       # своя обложка Reels (для сетки профиля)
+        cname = "igauto/cover_" + os.path.basename(cov)
+        ig.put_file(cname, open(cov, "rb").read(), f"cover {cname}")
+        time.sleep(5); extra["cover_url"] = ig.url(cname)
+    try:
+        cid = ig.call("POST", f"{ig.IG_USER}/media", media_type="REELS", video_url=ig.url(name),
+                      caption=caption, share_to_feed="true", access_token=tok, **extra)["id"]
+    except RuntimeError as e:
+        if not extra: raise
+        print("обложка не принята, публикую без неё:", e)
+        cid = ig.call("POST", f"{ig.IG_USER}/media", media_type="REELS", video_url=ig.url(name),
+                      caption=caption, share_to_feed="true", access_token=tok)["id"]
     for _ in range(60):                           # видео обрабатывается дольше картинки — ждём до 5 минут
         st = ig.call("GET", cid, fields="status_code", access_token=tok).get("status_code")
         if st == "FINISHED":
