@@ -232,7 +232,7 @@ def voice_layer(ru, ref):
     spaced(d, y + 36, ref.upper(), R.font("Montserrat_600SemiBold.ttf", 24), (*ACC, 230), 5)
     return L
 
-def build(spec, photo, out, offer=("Намазные коврики ummati", "Акция 1+1: 2 коврика за 9 900 ₸"), voice=None):
+def build(spec, photo, out, offer=("Намазные коврики ummati", "Пишите в директ"), voice=None):
     R.ensure_fonts(); ensure_ar_font()
     work = os.path.join(os.path.dirname(os.path.abspath(out)), "_work"); os.makedirs(work, exist_ok=True)
     s, name, a, ar, ru, nums = load(spec)
@@ -301,7 +301,7 @@ def build(spec, photo, out, offer=("Намазные коврики ummati", "А
         print("тафсир:", e)
     meta = {"title": f"{title}{part} — " + ("размышление и чтение" if voice else "чтение и перевод смыслов") + " #shorts",
             "description": " ".join(ru) + f"\n\nКоран, {ref}. Перевод смыслов: Э. Кулиев. Чтец: {READERS[READER]}.\n\n" + smysl +
-                           "Ummati — намазные коврики. Акция 1+1: 2 коврика за 9 900 ₸, вода Зам-Зам, тасбих и подарочная упаковка в комплекте. "
+                           "Ummati — намазные коврики. "
                            "Instagram: @ummati.family\n\n#коран #ислам #намаз #сура #shorts"}
     json.dump(meta, open(out.rsplit(".", 1)[0] + ".json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     return total

@@ -1,6 +1,11 @@
 """Публикует готовый ролик (videos/....mp4 + .json) в Threads как видео-пост.
 python threads_video.py videos/auto_2026-10-16T09.mp4"""
-import base64, json, os, sys, time, urllib.parse, urllib.request, urllib.error
+import base64, json, os, re, sys, time, urllib.parse, urllib.request, urllib.error
+
+def tags_only(m):
+    """Подпись к видео — только хэштеги (текст уже есть в самом ролике)."""
+    if m.get("caption"): return m["caption"]
+    return " ".join(t for t in re.findall(r"#\w+", m.get("description", "")) if t != "#shorts")
 
 API = "https://graph.threads.net/v1.0"
 TOKEN = os.environ["THREADS_TOKEN"]
@@ -38,10 +43,7 @@ def main(path):
     put_file(name, open(path, "rb").read())
     time.sleep(10)
     video_url = f"https://raw.githubusercontent.com/{REPO}/main/{urllib.parse.quote(name)}"
-    text = m["title"].replace(" #shorts", "")
-    rest = m["description"].split("\n\n")[0]
-    if len(text) + len(rest) + 2 <= 480:
-        text += "\n\n" + rest
+    text = tags_only(m)
     uid = threads("GET", "me", fields="id")["id"]
     cid = threads("POST", f"{uid}/threads", media_type="VIDEO", video_url=video_url, text=text[:490])["id"]
     for _ in range(60):                           # видео обрабатывается — ждём до 5 минут

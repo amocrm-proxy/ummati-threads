@@ -109,7 +109,7 @@ def build(out, h=None, kicker="ХАДИС ДНЯ", idx=0):
     meta = {"title": f"{short} — хадис #shorts",
             "description": (intro + "\n" if intro else "") + body + f"\n\n{attr}. {h['grade']}.\n"
                            "Перевод: Энциклопедия переведённых пророческих хадисов (HadeethEnc.com).\n\n"
-                           "Ummati — намазные коврики. Акция 1+1: 2 коврика за 9 900 ₸, вода Зам-Зам, тасбих и подарочная упаковка в комплекте. "
+                           "Ummati — намазные коврики. "
                            "Instagram: @ummati.family\n\n#хадис #сунна #ислам #пророк #shorts"}
     json.dump(meta, open(out.rsplit(".", 1)[0] + ".json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     return total

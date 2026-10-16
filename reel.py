@@ -1,7 +1,12 @@
 """Публикует готовый ролик (videos/....mp4 + .json) в Instagram как Reels.
 python reel.py videos/auto_2026-10-11T18.mp4"""
-import json, os, sys, time
+import json, os, re, sys, time
 import ig
+
+def tags_only(m):
+    """Подпись к видео — только хэштеги (текст уже есть в самом ролике)."""
+    if m.get("caption"): return m["caption"]
+    return " ".join(t for t in re.findall(r"#\w+", m.get("description", "")) if t != "#shorts")
 
 def main(path):
     m = json.load(open(path.rsplit(".", 1)[0] + ".json", encoding="utf-8"))
@@ -9,7 +14,7 @@ def main(path):
     ig.put_file(name, open(path, "rb").read(), f"reel {name}")
     time.sleep(10)
     tok = ig.page_token()
-    caption = m["description"].replace("#shorts", "#reels").replace("Instagram: @ummati.family", "Пишите в директ")
+    caption = tags_only(m)
     cid = ig.call("POST", f"{ig.IG_USER}/media", media_type="REELS", video_url=ig.url(name),
                   caption=caption, share_to_feed="true", access_token=tok)["id"]
     for _ in range(60):                           # видео обрабатывается дольше картинки — ждём до 5 минут

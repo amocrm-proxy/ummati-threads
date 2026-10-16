@@ -109,7 +109,7 @@ def build(out, given=None, kicker=None):
     meta = {"title": f"«{short}» — Коран {s}:{a} #shorts",
             "description": f"«{text}»\n\nКоран, сура «{C.NAMES[s - 1]}», аят {a}. Перевод смыслов: Э. Кулиев. "
                            "Чтец: Мухаммад Айюб.\n\n" + smysl +
-                           "Ummati — намазные коврики. Акция 1+1: 2 коврика за 9 900 ₸, вода Зам-Зам, тасбих и подарочная упаковка в комплекте. "
+                           "Ummati — намазные коврики. "
                            "Instagram: @ummati.family\n\n#коран #ислам #аят #намаз #shorts"}
     json.dump(meta, open(out.rsplit(".", 1)[0] + ".json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     return total

@@ -6,7 +6,12 @@ python tiktok.py --auth КОД                      — первый вход: �
 зашифрованный (AES-256, ключ — TT_CLIENT_SECRET), и обновляется при каждом запуске.
 Пока приложение не прошло аудит TikTok, видео публикуются только приватно (SELF_ONLY).
 После аудита: переменная репозитория TT_AUDITED=1 — и ролики станут публичными."""
-import base64, json, os, subprocess, sys, time, urllib.request, urllib.error
+import base64, json, os, re, subprocess, sys, time, urllib.request, urllib.error
+
+def tags_only(m):
+    """Подпись к видео — только хэштеги (текст уже есть в самом ролике)."""
+    if m.get("caption"): return m["caption"]
+    return " ".join(t for t in re.findall(r"#\w+", m.get("description", "")) if t != "#shorts")
 
 API = "https://open.tiktokapis.com/v2"
 KEY = os.environ.get("TT_CLIENT_KEY", "").strip()
@@ -73,7 +78,7 @@ def publish(path):
     info = api("post/publish/creator_info/query/", tok, {})
     opts = info.get("privacy_level_options", [])
     privacy = "PUBLIC_TO_EVERYONE" if os.environ.get("TT_AUDITED") == "1" and "PUBLIC_TO_EVERYONE" in opts else "SELF_ONLY"
-    title = (m["title"].replace(" #shorts", "") + "\n\n" + m["description"].replace("#shorts", "#tiktok #fyp"))[:2150]
+    title = (tags_only(m) + " #fyp")[:2150]
     size = os.path.getsize(path)
     src = {"source": "FILE_UPLOAD", "video_size": size, "chunk_size": size, "total_chunk_count": 1}
     inbox = False

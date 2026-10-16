@@ -4,8 +4,7 @@ import glob, json, os, re, shutil, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "motion"))
-OFFER = ("Ummati — намазные коврики. Акция 1+1: 2 коврика за 9 900 ₸, вода Зам-Зам, тасбих и подарочная упаковка в комплекте. "
-         "Instagram: @ummati.family")
+OFFER = "Ummati — намазные коврики. Instagram: @ummati.family"
 
 def _state(name, default):
     p = os.path.join(HERE, name)
@@ -53,10 +52,10 @@ def ayah_passage(spec, out):
     ref = f"{s}" if whole else f"{s}:{a}" + (f"-{a + len(ar) - 1}" if len(ar) > 1 else "")
     _meta(out, f"Сура «{name}»{part} — чтение и перевод смыслов #shorts",
           " ".join(ru) + f"\n\nКоран, {ref}. Перевод смыслов: Э. Кулиев. Чтец: {auto.NAMES[reader]}.\n\n" + _smysl(s, a) +
-          OFFER + "\n\n#коран #ислам #намаз #сура #shorts")
+          OFFER + "\n\n#коран #ислам #сура #аят #намаз #quran #shorts")
     return total
 
-def ayah_single(out, s, a, kicker=None, title=None, tags="#коран #ислам #аят #shorts"):
+def ayah_single(out, s, a, kicker=None, title=None, tags="#коран #ислам #аят #намаз #quran #shorts"):
     import video as V, auto
     _, _, _, ar, ru, nums = V.load(f"{s}:{a}")
     name = V.NAMES[s - 1]
@@ -93,7 +92,7 @@ def hadith_piece(out, h, kicker, tags):
 def hadith(out):
     import hadith_video
     h, _ = hadith_video.pick()
-    return hadith_piece(out, h, "ХАДИС", "#хадис #сунна #ислам #пророк #shorts")
+    return hadith_piece(out, h, "ХАДИС", "#хадис #сунна #ислам #пророк #мусульмане #shorts")
 
 def support(out):
     import support as S
@@ -117,8 +116,8 @@ def sale(out):
     total, pick = auto.sale(out, k)
     _save("sale_state.json", {"i": k + 1})
     off = json.load(open(os.path.join(HERE, "ig_content.json"), encoding="utf-8"))["offer"]
-    _meta(out, f"{off['kicker']}: {off['title']} — намазные коврики Ummati #shorts",
-          f"{off['kicker']}: {off['title']}. {off['body']}.\n\n" + " · ".join(p[1] for p in pick) +
+    _meta(out, "Коврики для намаза Ummati — подарок, которым пользуются 5 раз в день #shorts",
+          f"{off['title']}. {off['body']}.\n\n" + " · ".join(p[1] for p in pick) +
           "\n\nЗаказ: пишите в директ Instagram @ummati.family или в WhatsApp.\n\n#намаз #жайнамаз #намазныйковрик #ummati #подарок #казахстан #shorts")
     return total
 

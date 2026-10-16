@@ -2,7 +2,12 @@
 python yt.py videos/112.mp4 [public|unlisted|private]
 Ключи: YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN (секреты GitHub).
 Пока проект Google не прошёл аудит, YouTube сам делает видео приватными."""
-import json, os, sys, urllib.request, urllib.parse, urllib.error
+import json, os, re, sys, urllib.request, urllib.parse, urllib.error
+
+def tags_only(m):
+    """Подпись к видео — только хэштеги (текст уже есть в самом ролике)."""
+    if m.get("caption"): return m["caption"]
+    return " ".join(t for t in re.findall(r"#\w+", m.get("description", "")) if t != "#shorts")
 
 def token():
     data = urllib.parse.urlencode({
@@ -42,4 +47,4 @@ if __name__ == "__main__":
     # python yt.py videos/112.mp4 [privacy] — заголовок и описание берутся из videos/112.json
     path = sys.argv[1]
     m = json.load(open(path.rsplit(".", 1)[0] + ".json", encoding="utf-8"))
-    upload(path, m["title"], m["description"], sys.argv[2] if len(sys.argv) > 2 else "public")
+    upload(path, m["title"], tags_only(m) + " #shorts", sys.argv[2] if len(sys.argv) > 2 else "public")
