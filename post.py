@@ -115,10 +115,13 @@ yt_key = f"yt {slot[:13]}"
 VOICE = False                                     # ролики с голосом автора — пока не используем
 if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # Shorts/TikTok 5 раз в день (+ Reels в 12, 18 и 21)
     try:
-        # по кругу аят → хадис → поддержка → продажа коврика (сквозной счёт роликов с 15/10/2026);
+        # по кругу аят → хадис → поддержка (сквозной счёт роликов с 15/10/2026), продажа — 3 раза в неделю;
         # аят в 09 и 18 — отрывок Корана по порядку, в остальное время — «Сильный аят»
         n = (datetime.date.fromisoformat(slot[:10]) - datetime.date(2026, 10, 15)).days * 5 + (9, 12, 15, 18, 21).index(hour)
-        kind = ["ayah", "hadith", "support", "sale"][n % 4]          # сура/аят → хадис → поддержка → коврик
+        kind = ["ayah", "hadith", "support"][n % 3]                   # сура/аят → хадис → поддержка
+        wd = datetime.date.fromisoformat(slot[:10]).weekday()
+        if (wd, hour) in ((3, 21), (4, 12), (6, 12)):                # продажа коврика 3 раза в неделю: чт 21, пт 12, вс 12
+            kind = "sale"
         if kind == "ayah":
             kind = "auto" if hour in (9, 18) else "card"
         spec, vref = f"{kind}:{slot[:13]}", None
