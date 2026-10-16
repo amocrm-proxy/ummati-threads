@@ -195,7 +195,7 @@ def make_center(style, acc):
             sp = st.rotate(t * 9, resample=Image.BICUBIC); M.paste_alpha(img, sp, c, min(1, 0.3 + g), 1 + 0.03 * math.sin(t * 2))
             M.paste_alpha(img, core, c, 0.5 * g)
     elif style == "crescent":
-        cr = _crescent_sprite((255, 236, 200))
+        cr = _crescent_sprite((255, 236, 200) if sum(acc) > 450 else acc)
         def f(img, c, t, g):
             M.paste_alpha(img, orb, c, 0.6 * g, 1 + 0.04 * math.sin(t * 2.0)); M.paste_alpha(img, cr, c, min(1, 0.35 + g), 1 + 0.02 * math.sin(t * 1.6))
     else:  # "halo": кольцо света без шара
@@ -216,11 +216,35 @@ def slot_index(out):
     hr = int(m.group(2)); slots = (9, 12, 15, 18, 21)
     return days * 5 + (slots.index(hr) if hr in slots else hr % 5)
 
+def is_light(out):
+    """Светлый и тёмный фон чередуются по слотам публикации: 9:00 тёмный, 12:00 светлый, 15:00 тёмный…"""
+    return slot_index(out) % 2 == 1
+
+INK, SOFT_INK, GOLD_INK = (28, 54, 43), (70, 80, 72), (166, 124, 56)
+DARK_TEXT = ((246, 240, 230), (196, 206, 198))
+
+class LightDust:
+    def __init__(self):
+        import light; self.d = light.Dust(n=50)
+    def draw(self, img, t): self.d.draw(img, t)
+
 def pick(out):
     """Применяет оформление к модулю motion и возвращает описание."""
     n = slot_index(out)
-    pal = PALETTES[n % len(PALETTES)]
-    back = BACKDROPS[(n * 3 + 1 + n // len(PALETTES)) % len(BACKDROPS)]
+    orn = ORNAMENTS[(n // 2 + n) % len(ORNAMENTS)]
+    intro = INTRO_PARTICLES[n % len(INTRO_PARTICLES)]
+    cen = CENTERS[(n * 3 + n // 4) % len(CENTERS)]
+    if is_light(out):
+        import light
+        M.GOLD, M.MUTED, M.CREAM = GOLD_INK, SOFT_INK, INK
+        M.THEME = {"bg": light.paper(), "back": LightDust(), "orn": orn, "intro": intro, "acc": GOLD_INK,
+                   "center": make_center(cen, GOLD_INK), "light": True}
+        desc = f"оформление: светлое («Рукопись») · орнамент {orn} · центр {cen} · вход {intro}"
+        print(desc); return desc
+    M.CREAM = DARK_TEXT[0]
+    m = n // 2                                    # тёмные слоты идут через один — свой счётчик, чтобы были все палитры
+    pal = PALETTES[m % len(PALETTES)]
+    back = BACKDROPS[(m * 3 + 1 + m // len(PALETTES)) % len(BACKDROPS)]
     orn = ORNAMENTS[(n // 2 + n) % len(ORNAMENTS)]
     intro = INTRO_PARTICLES[n % len(INTRO_PARTICLES)]
     cen = CENTERS[(n * 3 + n // 4) % len(CENTERS)]

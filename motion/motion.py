@@ -77,6 +77,7 @@ def wrap(text, f, maxw, d):
     return lines
 
 def text_block(text, f, color, maxw=900, lh=1.25, glow=0, rtl=False, spacing=0):
+    if THEME and THEME.get("light"): glow = 0      # на светлом фоне без свечения — чистые «чернила»
     tmp = ImageDraw.Draw(Image.new("RGBA", (10, 10)))
     kw = {"direction": "rtl", "language": "ar"} if rtl else {}
     lines = wrap(text, f, maxw, tmp) if not rtl else wrap_rtl(text, f, maxw, tmp)
@@ -208,6 +209,7 @@ def shock(img, c, t, t0, color=None, r1=330, dur=1.2, width=3):
 class Words:
     """Строки, проявляющиеся по словам за время [t0, t0+span] (под темп чтения), затем держатся до t1."""
     def __init__(self, text, f, color, y, t0, span, t1, maxw=900, rtl=False, lh=1.3, glow=0):
+        if THEME and THEME.get("light"): glow = 0
         tmp = ImageDraw.Draw(Image.new("RGBA", (10, 10)))
         kw = {"direction": "rtl", "language": "ar"} if rtl else {}
         lines = (wrap_rtl if rtl else wrap)(text, f, maxw, tmp)
