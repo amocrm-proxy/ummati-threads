@@ -267,3 +267,84 @@ def sale(out, k=0):
     sc.extra.append(lg)
     M.render(sc, out, total, audio)
     return total, pick
+
+# ---------------- ролики с ковриками (ежедневно): коллекция / один цвет / подарочный набор ----------------
+WHATSAPP = "+7 707 834 25 25"
+
+def rug_reel(out, shots, kicker, title, lines, k=0, icons=None):
+    """shots: [(фото, заголовок, подпись)] — фото с наездом камеры; в конце карточка с призывом и номером WhatsApp.
+    icons: [(вид, текст)] — строки комплекта с иконками (вода Зам-Зам, тасбих, упаковка)."""
+    themes.pick(out)
+    work = out.rsplit(".", 1)[0] + "_m"; os.makedirs(work, exist_ok=True)
+    imgs = []
+    for ph, t, sub in shots:
+        im = Image.open(os.path.join(ROOT, ph)).convert("RGB")
+        im = ImageOps.fit(im, (860, 1000), Image.LANCZOS).resize((946, 1100), Image.LANCZOS)
+        mask = Image.new("L", im.size, 0); ImageDraw.Draw(mask).rounded_rectangle((0, 0, *im.size), 48, fill=255)
+        rgba = im.convert("RGBA"); rgba.putalpha(mask); imgs.append(rgba)
+    T_SHOT = 3.2
+    t_off = 0.4 + len(shots) * T_SHOT
+    total = t_off + 7.5
+    audio = os.path.join(work, "mix.m4a")
+    b = bed_file(k + 3)
+    if b: mix([], total, audio, bed=b, bed_vol=0.6)
+    else: audio = None
+    sc = Scene(total, glow=0.6)
+    Tx = M.text_block
+    sc.parts.append(M.Particles(120, 7, "orbit", C, 0.0, total - 1, spread=420))
+    def photos(img, t):
+        for i, rgba in enumerate(imgs):
+            t0 = 0.4 + i * T_SHOT; t1 = t0 + T_SHOT + 0.4
+            if t < t0 or t > t1: continue
+            a = min(M.ease((t - t0) / 0.6), M.ease((t1 - t) / 0.6))
+            z = 0.91 + 0.09 * ((t - t0) / (t1 - t0))
+            w, h = int(rgba.width * z), int(rgba.height * z)
+            img.alpha_composite(M.fade(rgba.resize((w, h), Image.BILINEAR), a), ((M.W - w) // 2, 690 - h // 2))
+    sc.extra.append(photos)
+    for i, (_, t, sub) in enumerate(shots):
+        t0 = 0.4 + i * T_SHOT
+        sc.items.append(M.Item(Tx(t, M.SERIF(64), M.CREAM, glow=5, maxw=900), 1360, t0 + 0.4, t0 + T_SHOT + 0.2))
+        if sub: sc.items.append(M.Item(Tx(sub, M.SANS(30), M.MUTED, maxw=880), 1450, t0 + 0.7, t0 + T_SHOT + 0.2))
+        sc.shocks.append(t0)
+    sc.items.append(M.Item(Tx("UMMATI · НАМАЗНЫЕ КОВРИКИ", M.SANS_B(28), M.GOLD, spacing=6), 1560, 0.6, t_off))
+    sc.shocks.append(t_off)
+    sc.parts.append(M.Particles(110, 9, "burst", C, t_off, t_off + 2.4, spread=560))
+    sc.items += [M.Item(Tx(kicker.upper(), M.SANS_B(40), M.GOLD, spacing=8), 960, t_off + 0.1, total),
+                 M.Item(Tx(title, M.SERIF(96), M.CREAM, glow=8, maxw=960), 1080, t_off + 0.4, total)]
+    y = 1200
+    if icons:
+        for j, (kind, txt) in enumerate(icons):
+            ic = _icon(kind, 64)
+            row = Image.new("RGBA", (M.W, 90), (0, 0, 0, 0)); ImageDraw.Draw(row)
+            f = M.SANS(36); tw = ImageDraw.Draw(row).textlength(txt, font=f); x0 = int((M.W - tw - 84) / 2)
+            row.alpha_composite(ic, (x0, 13)); ImageDraw.Draw(row).text((x0 + 84, 45), txt, font=f, fill=M.CREAM, anchor="lm")
+            sc.items.append(M.Item(row, y + j * 82, t_off + 0.9 + j * 0.25, total, rise=16))
+        y += len(icons) * 82 + 20
+    for j, ln in enumerate(lines):
+        sc.items.append(M.Item(Tx(ln, M.SERIF(46), M.MUTED, maxw=900), y + j * 64, t_off + 1.0 + j * 0.2, total))
+    y += len(lines) * 64 + 40
+    sc.items += [M.Item(Tx("ПИШИТЕ В ДИРЕКТ ИЛИ WHATSAPP", M.SANS_B(30), M.GOLD, spacing=5), y, t_off + 1.8, total),
+                 M.Item(Tx(WHATSAPP, M.SANS_B(44), M.CREAM, spacing=2), y + 70, t_off + 2.1, total)]
+    import ig_render
+    logo = ig_render._logo(M.GOLD, 150)
+    def lg(img, t):
+        a = M.ease((t - t_off - 2.4) / 1.0)
+        if a > 0: img.alpha_composite(M.fade(logo, a), ((M.W - logo.width) // 2, min(1720, int(y + 150))))
+    sc.extra.append(lg)
+    M.render(sc, out, total, audio)
+    return total
+
+def _icon(kind, sz):
+    im = Image.new("RGBA", (sz, sz), (0, 0, 0, 0)); d = ImageDraw.Draw(im); s = sz; col = (*M.GOLD, 255); wd = max(3, sz // 22)
+    if kind == "bottle":
+        d.rounded_rectangle((s*.38, s*.06, s*.62, s*.18), 4, outline=col, width=wd); d.rounded_rectangle((s*.28, s*.22, s*.72, s*.94), 10, outline=col, width=wd)
+    elif kind == "tasbih":
+        cx, cy, r = s/2, s*.4, s*.3
+        for q in range(16):
+            a = math.radians(-55 + q*290/15); x, y = cx + r*math.cos(a), cy + r*math.sin(a); d.ellipse((x-4, y-4, x+4, y+4), fill=col)
+        d.line((cx, cy+r, cx, s*.9), fill=col, width=wd)
+    else:
+        d.rectangle((s*.14, s*.36, s*.86, s*.5), outline=col, width=wd); d.rectangle((s*.2, s*.5, s*.8, s*.92), outline=col, width=wd)
+        d.line((s*.5, s*.36, s*.5, s*.92), fill=col, width=wd)
+        d.ellipse((s*.26, s*.12, s*.5, s*.36), outline=col, width=wd); d.ellipse((s*.5, s*.12, s*.74, s*.36), outline=col, width=wd)
+    return im
