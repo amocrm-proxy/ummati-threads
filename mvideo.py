@@ -140,15 +140,43 @@ def support(out):
     _save("support_state.json", {"i": j + 1})
     return total
 
+RUG_TAGS = "#намазныйковрик #жайнамаз #ummati #подарок #казахстан #намаз #shorts"
+IN_SET = ["Микровелюр с мягким ворсом · не скользит", "В комплекте: вода Зам-Зам, чётки из агата", "и подарочная упаковка"]
+COLORS = [
+    ("Изумрудный", [("green_arch.jpg", "Изумрудный", "Коврик в форме арки"), ("L1033132.jpg", "С золотой кисточкой", ""),
+                    ("green_label.jpg", "Мягкий ворс и нашивка Ummati", ""), ("green_tex.jpg", "Рельефный узор", "")]),
+    ("Шоколадный", [("brown_arch.jpg", "Шоколадный", "Тёплый и уютный"), ("L1033112.jpg", "Мягкий бархатистый ворс", ""),
+                    ("brown_tex.jpg", "Рельефный узор", "")]),
+    ("Графит", [("grey_arch.jpg", "Графит", "Спокойный и современный"), ("L1033127.jpg", "Мягкий ворс бережёт колени", ""),
+                ("grey_label.jpg", "Аккуратный кант и нашивка", ""), ("L1033130.jpg", "Рельефный узор", "")]),
+    ("Чёрный", [("black_arch.jpg", "Чёрный", "Строгая классика"), ("L1033115.jpg", "Глубокий чёрный", ""),
+                ("L1033117.jpg", "Фирменная нашивка Ummati", "")]),
+]
+GIFT = [("gift_set.jpg", "Готовый подарок", "Фирменный пакет, вода Зам-Зам и чётки из агата"), ("stack.jpg", "Четыре цвета на выбор", ""),
+        ("L1033132.jpg", "Подарок, которым пользуются 5 раз в день", "")]
+
 def sale(out):
+    """Ролик с ковриками (ежедневно): по очереди коллекция → один цвет → подарочный набор."""
     import auto
     st = _state("sale_state.json", {"i": 0}); k = int(st.get("i", 0))
-    total, pick = auto.sale(out, k)
+    fmt = k % 3
+    have = lambda shots: [x for x in shots if os.path.exists(os.path.join(HERE, x[0]))]
+    if fmt == 1:
+        name, shots = COLORS[(k // 3) % len(COLORS)]
+        total = auto.rug_reel(out, have(shots), name, "Коврик для намаза", IN_SET, k=k)
+        title = f"{name} коврик для намаза — Ummati #shorts"
+    elif fmt == 2 and os.path.exists(os.path.join(HERE, "gift_set.jpg")):
+        total = auto.rug_reel(out, have(GIFT), "Ummati", "Готовый подарок", [], k=k,
+                              icons=[("bottle", "Вода Зам-Зам"), ("tasbih", "Чётки из агата"), ("gift", "Подарочная упаковка")])
+        title = "Готовый подарок: коврик для намаза, Зам-Зам и чётки — Ummati #shorts"
+    else:
+        cfg = json.load(open(os.path.join(HERE, "ig_content.json"), encoding="utf-8"))
+        promos = [p for p in cfg["promos"] if os.path.exists(os.path.join(HERE, p[0]))]
+        pick = [promos[(k + i * 5) % len(promos)] for i in range(3)]
+        total = auto.rug_reel(out, [(p[0], p[1], p[2]) for p in pick], "Ummati", "Коврики для намаза", IN_SET, k=k)
+        title = "Коврики для намаза Ummati — подарок, которым пользуются 5 раз в день #shorts"
     _save("sale_state.json", {"i": k + 1})
-    off = json.load(open(os.path.join(HERE, "ig_content.json"), encoding="utf-8"))["offer"]
-    _meta(out, "Коврики для намаза Ummati — подарок, которым пользуются 5 раз в день #shorts",
-          f"{off['title']}. {off['body']}.\n\n" + " · ".join(p[1] for p in pick) +
-          "\n\nЗаказ: пишите в директ Instagram @ummati.family или в WhatsApp.\n\n#намаз #жайнамаз #намазныйковрик #ummati #подарок #казахстан #shorts")
+    _meta(out, title, RUG_TAGS)
     return total
 
 def build(spec, out):
