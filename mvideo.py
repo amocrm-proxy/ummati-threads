@@ -4,6 +4,7 @@ import glob, json, os, re, shutil, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "motion"))
+import kk
 OFFER = "Ummati — намазные коврики. Instagram: @ummati.family"
 
 def _state(name, default):
@@ -46,8 +47,12 @@ def ayah_passage(spec, out):
     sp, _ = V.auto_spec(spec[5:] or None)
     s, _, a, ar, ru, nums = V.load(sp)
     name = V.NAMES[s - 1]
-    total = auto.ayahs(out, s, name, a, ar, ru, nums, reader)
+    total = auto.ayahs(out, s, kk.NAMES[s - 1] if kk.ON else name, a, ar, ru, nums, reader)
     whole = a == 1 and a + len(ar) - 1 == V.COUNTS[s - 1]
+    if kk.ON:
+        part = "" if whole else (f", {a}-аят" if len(ar) == 1 else f", {a}–{a + len(ar) - 1} аяттар")
+        _meta(out, f"{kk.sura(s)}{part} — оқылуы мен мағынасы #shorts", "#құран #сүре #аят #ислам #намаз #quran")
+        return total
     part = "" if whole else (f", аят {a}" if len(ar) == 1 else f", аяты {a}–{a + len(ar) - 1}")
     ref = f"{s}" if whole else f"{s}:{a}" + (f"-{a + len(ar) - 1}" if len(ar) > 1 else "")
     _meta(out, f"Сура «{name}»{part} — чтение и перевод смыслов #shorts",
@@ -60,8 +65,12 @@ def ayah_single(out, s, a, kicker=None, title=None, tags="#коран #исла�
     _, _, _, ar, ru, nums = V.load(f"{s}:{a}")
     name = V.NAMES[s - 1]
     reader = "ar.muhammadayyoub"
-    total = auto.ayahs(out, s, name, a, ar, ru, nums, reader, repeat=True, kicker=kicker)
+    total = auto.ayahs(out, s, kk.NAMES[s - 1] if kk.ON else name, a, ar, ru, nums, reader, repeat=True, kicker=kicker)
     text = ru[0]
+    if kk.ON:
+        short = text if len(text) <= 70 else text[:text.rfind(" ", 0, 66)].rstrip(",;:—-") + "…"
+        _meta(out, title or f"«{short}» — {kk.ref(s, a)} #shorts", tags if "#құран" in tags else "#құран #аят #ислам #намаз #quran")
+        return total
     short = text if len(text) <= 70 else text[:text.rfind(" ", 0, 66)].rstrip(",;:—-") + "…"
     _meta(out, title or f"«{short}» — Коран {s}:{a} #shorts",
           f"«{text}»\n\nКоран, сура «{name}», аят {a}. Перевод смыслов: Э. Кулиев. Чтец: {auto.NAMES[reader]}.\n\n" + _smysl(s, a) +
@@ -132,7 +141,8 @@ def support(out):
         if not x:
             continue
         if x[0] == "ayah" and len(x[3]) <= 300:
-            total = ayah_single(out, x[1], x[2], kicker=S.KICKER, tags="#коран #поддержка #ислам #shorts"); break
+            total = ayah_single(out, x[1], x[2], kicker=S.KICKER,
+                                tags="#құран #демеу #ислам" if kk.ON else "#коран #поддержка #ислам #shorts"); break
         if x[0] == "hadith" and sum(map(len, S.C.hadith_parts(x[1]))) <= 420:
             total = hadith_any(out, x[1], S.KICKER, "#хадис #поддержка #ислам #shorts"); break
     else:
@@ -155,6 +165,22 @@ COLORS = [
 GIFT = [("gift_set.jpg", "Готовый подарок", "Фирменный пакет, вода Зам-Зам и чётки из агата"), ("stack.jpg", "Четыре цвета на выбор", ""),
         ("L1033132.jpg", "Подарок, которым пользуются 5 раз в день", "")]
 
+if kk.ON:                                        # казахский режим — те же фото, тексты на казахском
+    RUG_TAGS = "#жайнамаз #намазныйковрик #ummati #сыйлық #қазақстан #намаз"
+    IN_SET = ["Микровелюр, жұмсақ түгі бар · тайғанамайды", "Жиынтықта: Зәмзәм суы, агат тасбих", "және сыйлық қаптамасы"]
+    COLORS = [
+        ("Зүмірет", [("green_arch.jpg", "Зүмірет түсті", "Арка пішінді жайнамаз"), ("L1033132.jpg", "Алтын түсті шашағымен", ""),
+                     ("green_label.jpg", "Жұмсақ түгі және Ummati белгісі", ""), ("green_tex.jpg", "Бедерлі өрнек", "")]),
+        ("Шоколад", [("brown_arch.jpg", "Шоколад түсті", "Жылы әрі жайлы"), ("L1033112.jpg", "Жұмсақ барқыт түгі", ""),
+                     ("brown_tex.jpg", "Бедерлі өрнек", "")]),
+        ("Графит", [("grey_arch.jpg", "Графит түсті", "Байсалды әрі заманауи"), ("L1033127.jpg", "Жұмсақ түгі тізені аялайды", ""),
+                    ("grey_label.jpg", "Ұқыпты жиегі мен белгісі", ""), ("L1033130.jpg", "Бедерлі өрнек", "")]),
+        ("Қара", [("black_arch.jpg", "Қара түсті", "Талғампаз классика"), ("L1033115.jpg", "Терең қара түс", ""),
+                  ("L1033117.jpg", "Ummati фирмалық белгісі", "")]),
+    ]
+    GIFT = [("gift_set.jpg", "Дайын сыйлық", "Фирмалық пакет, Зәмзәм суы және агат тасбих"), ("stack.jpg", "Таңдауға төрт түс", ""),
+            ("L1033132.jpg", "Күніне бес рет қолданылатын сыйлық", "")]
+
 def sale(out):
     """Ролик с ковриками (ежедневно): по очереди коллекция → один цвет → подарочный набор."""
     import auto
@@ -163,18 +189,24 @@ def sale(out):
     have = lambda shots: [x for x in shots if os.path.exists(os.path.join(HERE, x[0]))]
     if fmt == 1:
         name, shots = COLORS[(k // 3) % len(COLORS)]
-        total = auto.rug_reel(out, have(shots), name, "Коврик для намаза", IN_SET, k=k)
-        title = f"{name} коврик для намаза — Ummati #shorts"
+        total = auto.rug_reel(out, have(shots), name, "Жайнамаз" if kk.ON else "Коврик для намаза", IN_SET, k=k)
+        title = f"{name} түсті жайнамаз — Ummati #shorts" if kk.ON else f"{name} коврик для намаза — Ummati #shorts"
     elif fmt == 2 and os.path.exists(os.path.join(HERE, "gift_set.jpg")):
-        total = auto.rug_reel(out, have(GIFT), "Ummati", "Готовый подарок", [], k=k,
-                              icons=[("bottle", "Вода Зам-Зам"), ("tasbih", "Чётки из агата"), ("gift", "Подарочная упаковка")])
-        title = "Готовый подарок: коврик для намаза, Зам-Зам и чётки — Ummati #shorts"
+        if kk.ON:
+            total = auto.rug_reel(out, have(GIFT), "Ummati", "Дайын сыйлық", [], k=k,
+                                  icons=[("bottle", "Зәмзәм суы"), ("tasbih", "Агат тасбих"), ("gift", "Сыйлық қаптамасы")])
+            title = "Дайын сыйлық: жайнамаз, Зәмзәм суы және тасбих — Ummati #shorts"
+        else:
+            total = auto.rug_reel(out, have(GIFT), "Ummati", "Готовый подарок", [], k=k,
+                                  icons=[("bottle", "Вода Зам-Зам"), ("tasbih", "Чётки из агата"), ("gift", "Подарочная упаковка")])
+            title = "Готовый подарок: коврик для намаза, Зам-Зам и чётки — Ummati #shorts"
     else:
-        cfg = json.load(open(os.path.join(HERE, "ig_content.json"), encoding="utf-8"))
+        cfg = json.load(open(os.path.join(HERE, "ig_content_kk.json" if kk.ON else "ig_content.json"), encoding="utf-8"))
         promos = [p for p in cfg["promos"] if os.path.exists(os.path.join(HERE, p[0]))]
         pick = [promos[(k + i * 5) % len(promos)] for i in range(3)]
-        total = auto.rug_reel(out, [(p[0], p[1], p[2]) for p in pick], "Ummati", "Коврики для намаза", IN_SET, k=k)
-        title = "Коврики для намаза Ummati — подарок, которым пользуются 5 раз в день #shorts"
+        total = auto.rug_reel(out, [(p[0], p[1], p[2]) for p in pick], "Ummati", "Жайнамаздар" if kk.ON else "Коврики для намаза", IN_SET, k=k)
+        title = ("Ummati жайнамаздары — күніне бес рет қолданылатын сыйлық #shorts" if kk.ON else
+                 "Коврики для намаза Ummati — подарок, которым пользуются 5 раз в день #shorts")
     _save("sale_state.json", {"i": k + 1})
     _meta(out, title, RUG_TAGS)
     return total
@@ -183,5 +215,7 @@ def build(spec, out):
     import render as R, video as V
     R.ensure_fonts(); V.ensure_ar_font()
     kind = spec.split(":")[0]
+    if kk.ON and kind == "hadith":               # казахский режим: хадисов нет — вместо них «Сильный аят»
+        kind = "card"
     return {"auto": lambda: ayah_passage(spec, out), "card": lambda: strong_ayah(out), "hadith": lambda: hadith(out),
             "support": lambda: support(out), "sale": lambda: sale(out)}[kind]()

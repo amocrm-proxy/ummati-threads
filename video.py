@@ -7,6 +7,7 @@ OFFLINE=dir — взять текст из dir/text.json и тишину вме�
 import json, os, sys, subprocess, urllib.request, io, math
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import render as R
+import kk
 
 W, H, FPS = 1080, 1920, 30
 ACC, FG, MUT = (233, 190, 140), (246, 240, 230), (226, 218, 204)
@@ -73,6 +74,8 @@ def load(spec):
         if len(w) > 4 and w[0].startswith("بِس"):
             ar[0] = " ".join(w[4:])
     ru = [t.replace(" - ", " — ").strip() for t in d["ru"][a - 1:b]]
+    if kk.ON:                                    # казахский режим: перевод Халифы Алтая вместо Кулиева
+        ru = [kk.text(int(s), j) for j in range(a, b + 1)]
     return int(s), d["name"], a, ar, ru, d["num"][a - 1:b]
 
 def audio(nums, work):
@@ -175,7 +178,7 @@ def outro_layer(offer):
     L.alpha_composite(lg, ((W - lg.width) // 2, 640))
     y = 640 + lg.height + 70
     ft = R.font("CormorantGaramond_500Medium.ttf", 66)
-    for ln in ["Сохраните и отправьте", "тому, кому это нужно"]:
+    for ln in (["Сақтап, қажет адамға", "жіберіңіз"] if kk.ON else ["Сохраните и отправьте", "тому, кому это нужно"]):
         d.text(((W - d.textlength(ln, font=ft)) / 2, y), ln, font=ft, fill=(*FG, 255)); y += 78
     y += 50; orn(d, y); y += 60
     fb = R.font("Montserrat_400Regular.ttf", 34)
@@ -232,13 +235,14 @@ def voice_layer(ru, ref):
     spaced(d, y + 36, ref.upper(), R.font("Montserrat_600SemiBold.ttf", 24), (*ACC, 230), 5)
     return L
 
-def build(spec, photo, out, offer=("Намазные коврики ummati", "Пишите в директ"), voice=None):
+def build(spec, photo, out, offer=None, voice=None):
+    offer = offer or (("Ummati жайнамаздары", kk.WRITE_DM) if kk.ON else ("Намазные коврики ummati", "Пишите в директ"))
     R.ensure_fonts(); ensure_ar_font()
     work = os.path.join(os.path.dirname(os.path.abspath(out)), "_work"); os.makedirs(work, exist_ok=True)
     s, name, a, ar, ru, nums = load(spec)
     files, durs = audio(nums, work)
     intro, gap, outro, fade = 0.8, 0.5, 3.5, 0.35
-    title = f"Сура «{NAMES[s - 1]}»"
+    title = kk.sura(s) if kk.ON else f"Сура «{NAMES[s - 1]}»"
     # таймлайн: (начало, конец, слой)
     scenes, t = [], 0.0
     if voice:                                           # сначала голос автора, потом чтение
@@ -249,7 +253,7 @@ def build(spec, photo, out, offer=("Намазные коврики ummati", "П
                                            f"Коран, {s}:{a}" + (f"-{a + len(ar) - 1}" if len(ar) > 1 else ""))))
         files = [voice] + files
     for i, (x, y, dur) in enumerate(zip(ar, ru, durs)):
-        ref_i = f"Коран, {s}:{a + i} · пер. Э. Кулиева"
+        ref_i = f"{kk.ref(s, a + i)} · Халифа Алтай" if kk.ON else f"Коран, {s}:{a + i} · пер. Э. Кулиева"
         pages = pages_of(x, y)
         t += intro if i == 0 and not voice else 0
         for j, (px, py) in enumerate(pages):           # длинный аят показываем по частям, пока звучит чтение
@@ -291,6 +295,11 @@ def build(spec, photo, out, offer=("Намазные коврики ummati", "П
     whole = a == 1 and a + len(ar) - 1 == COUNTS[s - 1]
     ref = f"{s}" if whole else f"{s}:{a}" + (f"-{a + len(ar) - 1}" if len(ar) > 1 else "")
     part = "" if whole else (f", аят {a}" if len(ar) == 1 else f", аяты {a}–{a + len(ar) - 1}")
+    if kk.ON:
+        part = "" if whole else (f", {a}-аят" if len(ar) == 1 else f", {a}–{a + len(ar) - 1} аяттар")
+        json.dump({"title": f"{title}{part} — оқылуы мен мағынасы #shorts", "description": "#құран #сүре #ислам #намаз"},
+                  open(out.rsplit(".", 1)[0] + ".json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        return total
     smysl = ""
     try:                                              # краткий смысл первого аята (тафсир ас-Саади, пер. Э. Кулиева)
         import content
@@ -315,6 +324,8 @@ if __name__ == "__main__":
     photo = sys.argv[2] if len(sys.argv) > 2 else "green_tex.jpg"
     out = sys.argv[3] if len(sys.argv) > 3 else "short.mp4"
     voice = None
+    if kk.ON and spec.startswith("hadith"):            # казахский режим: хадисов нет — вместо них «Сильный аят»
+        spec = "card" + spec[6:]
     if spec.split(":")[0] in ("auto", "card", "hadith", "support", "sale"):   # моушн-версии (motion/), при сбое — старые шаблоны
         try:
             import mvideo

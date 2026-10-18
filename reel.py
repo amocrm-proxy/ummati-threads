@@ -4,6 +4,11 @@ import json, os, re, sys, time
 import ig
 
 BRAND_TAGS = "#коран #ислам #сура #жайнамаз #намазныековрики"   # на всех видео во всех соцсетях
+try:
+    import kk
+    if kk.ON: BRAND_TAGS = kk.TAGS                 # казахский режим — казахские хэштеги
+except ImportError:
+    pass
 
 def tags_only(m):
     """Подпись к видео — только хэштеги (текст уже есть в самом ролике): общие + тематические, без повторов."""

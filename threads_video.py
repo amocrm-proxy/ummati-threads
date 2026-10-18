@@ -3,6 +3,11 @@ python threads_video.py videos/auto_2026-10-16T09.mp4"""
 import base64, json, os, re, sys, time, urllib.parse, urllib.request, urllib.error
 
 BRAND_TAGS = "#коран #ислам #сура #жайнамаз #намазныековрики"   # на всех видео во всех соцсетях
+try:
+    import kk
+    if kk.ON: BRAND_TAGS = kk.TAGS                 # казахский режим — казахские хэштеги
+except ImportError:
+    pass
 
 def tags_only(m):
     """Подпись к видео — только хэштеги (текст уже есть в самом ролике): общие + тематические, без повторов."""

@@ -9,6 +9,7 @@ SLOT=dry:2026-10-10T16:00 — тест: рисует и кладёт карто�
 """
 import base64, io, json, os, re, subprocess, sys, time, datetime, urllib.request, urllib.parse, urllib.error
 from zoneinfo import ZoneInfo
+import kk                                          # kk.ON — казахский режим (аяты Алтая, хадисов нет)
 
 API = "https://graph.threads.net/v1.0"
 TOKEN = os.environ["THREADS_TOKEN"]
@@ -124,6 +125,8 @@ if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # Shorts/Ti
             kind = "sale"
         if kind == "ayah":
             kind = "auto" if hour in (9, 18) else "card"
+        if kk.ON and kind == "hadith":                               # казахский режим: вместо хадиса — «Сильный аят»
+            kind = "card"
         spec, vref = f"{kind}:{slot[:13]}", None
         if hour == 18 and VOICE:                      # в 18:00 — ролик с голосом автора, если он записан (пока выключено)
             try:
@@ -158,7 +161,7 @@ TEXT_HOUR = (hour // 2) % 2 == 1
 plain = None                                      # текст для текстового поста (≤ 500 знаков), иначе — картинка
 ready = None                                      # готовые картинки (рубрика «Аят и наука»)
 import science as S
-sci = S.entry(slot) if hour == S.HOUR and not post else None
+sci = S.entry(slot) if hour == S.HOUR and not post and not kk.ON else None   # «Аят и наука» пока только на русском
 if sci:                                           # 12:00 — «Аят и наука» (та же карусель, что в Instagram)
     got = S.build(sci)
     if not got:
@@ -179,8 +182,22 @@ elif hour % 3 == 0:                               # аят → хадис → с
     print("Аят", n, ref)
     if TEXT_HOUR:                                 # текстовый пост: аят целиком, дословно, если влезает
         a = C.ayah((n - 1) % C.TOTAL_AYAHS + 1)
-        if a:
+        if a and kk.ON:
+            plain = f"«{a[2]}»\n\n{kk.caption(a[0], a[1])}"
+        elif a:
             plain = f"«{a[2]}»\n\nКоран, сура «{C.NAMES[a[0] - 1]}», аят {a[1]}. Перевод смыслов Э. Кулиева."
+elif hour % 3 == 1 and kk.ON:                     # казахский режим: вместо хадиса — аят из подборки bank.json
+    bank = [b["ref"] for b in json.load(open("bank.json", encoding="utf-8")) if not b.get("q")]
+    k = int(used.get("kb_next", 0))
+    s_, a_ = kk.parse_ref(bank[k % len(bank)]); t_ = kk.text(s_, a_)
+    parts = C.chunks(t_)
+    cards = [(C.show(p, i, len(parts)), kk.ref(s_, a_) + (f" · {i + 1}/{len(parts)}" if len(parts) > 1 else ""),
+              f"{kk.sura(s_)}. {kk.SOURCE}", kk.K_QURAN) for i, p in enumerate(parts)]
+    text = kk.caption(s_, a_) + "\n\n" + kk.TAGS + " #аят"
+    pointer = ("kb_next", k + 1)
+    if TEXT_HOUR:
+        plain = f"«{t_}»\n\n{kk.caption(s_, a_)}"
+    print("Аят (подборка)", k, s_, a_)
 elif hour % 3 == 1:                               # 1, 4, 7… — следующий хадис
     H = C.hadiths()
     k = int(used.get("h_next", 0))

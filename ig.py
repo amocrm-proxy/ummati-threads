@@ -7,6 +7,7 @@
    Все банки идут по кругу. SLOT=dry:... — нарисовать и загрузить без публикации."""
 import json, os, sys, io, time, datetime, subprocess, urllib.request, urllib.parse, urllib.error, base64
 from zoneinfo import ZoneInfo
+import kk                                        # kk.ON — казахский режим
 
 G = "https://graph.facebook.com/v21.0"
 IG_USER = "17841478246747969"
@@ -139,23 +140,36 @@ PENDING = {}                                     # указатели (аят/х
 def auto_item(slot, used):
     subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pillow"], check=True)
     import ig_render as R
-    C = json.load(open("ig_content.json", encoding="utf-8"))
+    C = json.load(open("ig_content_kk.json" if kk.ON else "ig_content.json", encoding="utf-8"))
+    DM = kk.WRITE_DM if kk.ON else "Пишите в директ"
     P = ""
     h = int(slot[11:13]); d = (datetime.date.fromisoformat(slot[:10]) - START).days
     tags = "\n\n" + C["tags"]
     off = C["offer"]
     def offer(page=None):
-        return R.text_slide("choc", off["kicker"], title=off["title"], body=off["body"], page=page, footer="Пишите в директ")
+        return R.text_slide("choc", off["kicker"], title=off["title"], body=off["body"], page=page, footer=DM)
     if h == 8:                                   # аяты Корана по порядку (перевод Кулиева, длинный аят — несколько сторис)
         import content
         n = int(used.get("igq_next", 1))
         got = content.ayah_cards((n - 1) % content.TOTAL_AYAHS + 1)
         if not got: return None
         PENDING["igq_next"] = n + 1
+        if kk.ON:
+            return "stories", [R.text_slide("cream", "Құран Кәрім", quote=q, source=src, body=ex, story=True)
+                               for q, src, ex, kick in got[0]], ""
         return "stories", [R.text_slide("cream" if kick == "СЛОВА ВСЕВЫШНЕГО" else "emer",
                                         "Слова Всевышнего" if kick == "СЛОВА ВСЕВЫШНЕГО" else "Смысл аята",
                                         quote=q, source=src, body=ex, story=True)
                            for q, src, ex, kick in got[0]], ""
+    if h == 14 and kk.ON:                        # казахский режим: вместо хадиса — аят из подборки (с конца bank.json)
+        import content
+        bank = [b["ref"] for b in json.load(open("bank.json", encoding="utf-8")) if not b.get("q")][::-1]
+        k = int(used.get("igk_next", 0)); s, a = kk.parse_ref(bank[k % len(bank)]); t = kk.text(s, a)
+        parts = content.chunks(t)
+        PENDING["igk_next"] = k + 1
+        return "stories", [R.text_slide("emer", "Құран Кәрім", quote=content.show(p, i, len(parts)),
+                                        source=kk.ref(s, a), body=f"{kk.sura(s)}. {kk.SOURCE}", story=True)
+                           for i, p in enumerate(parts)], ""
     if h == 14:                                  # хадисы по порядку из hadiths.json
         import content
         H = content.hadiths(); k = int(used.get("igh_next", 0))
@@ -170,8 +184,10 @@ def auto_item(slot, used):
         if not x: return None
         PENDING["igs_next"] = k + 1
         cards, _ = support.cards(x)
-        return "stories", [R.text_slide("emer", "Слова поддержки", quote=q, source=src, body=ex, story=True)
+        return "stories", [R.text_slide("emer", "Жүрекке демеу" if kk.ON else "Слова поддержки", quote=q, source=src, body=ex, story=True)
                            for q, src, ex, _ in cards], ""
+    if h == 12 and kk.ON:                        # «Аят и наука» пока только на русском
+        return None
     if h == 12:                                  # «Аят и наука» — карусель (science.json по кругу)
         import science
         e = science.entry(slot)
@@ -180,9 +196,9 @@ def auto_item(slot, used):
         return "carousel", got[0], got[1]
     if h == 21:
         ph, t, b = C["promos"][d % len(C["promos"])]
-        return "story", [R.photo_slide(P + ph, t, b, story=True, footer="Пишите в директ", kicker="ummati")], ""
+        return "story", [R.photo_slide(P + ph, t, b, story=True, footer=DM, kicker="ummati")], ""
     if h == 19:
-        if d % 2 == 0:
+        if d % 2 == 0 and not kk.ON:             # «Мысль дня» — русский текст, в казахском режиме только карусели
             a = next_ayah(used)
             if not a: return None
             q, src, x = a
@@ -190,7 +206,7 @@ def auto_item(slot, used):
                    R.text_slide("cream", "Мысль дня", title=x, page="2/3"),
                    R.text_slide("emer", "ummati", title="Сохраните и отправьте тому, кому это нужно сегодня", page="3/3")]
             return "carousel", ims, f"«{q}» ({src}, пер. Э. Кулиева).\n\n{x}" + tags
-        car = C["carousels"][(d // 2) % len(C["carousels"])]
+        car = C["carousels"][(d if kk.ON else d // 2) % len(C["carousels"])]
         n = len(car["slides"]); ims = []
         for i, s in enumerate(car["slides"], 1):
             pg = f"{i}/{n}"
@@ -198,7 +214,7 @@ def auto_item(slot, used):
                 ims.append(R.photo_slide(P + s[1], s[2], s[3] or None, page=pg, kicker="ummati" if i == 1 else None))
             elif s[0] == "text":
                 ims.append(R.text_slide(s[1], s[2], title=s[3], body=s[4], page=pg,
-                                        footer="Пишите в директ" if i == n else None))
+                                        footer=DM if i == n else None))
             else:
                 ims.append(offer(pg))
         return "carousel", ims, car["caption"] + tags

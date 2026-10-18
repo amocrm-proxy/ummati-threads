@@ -84,6 +84,11 @@ def background(p):
     return img
 
 def render(quote, source, explain, hour, kicker="СЛОВА ВСЕВЫШНЕГО"):
+    try:
+        import kk
+        if kk.ON and kicker == "СЛОВА ВСЕВЫШНЕГО": kicker = kk.K_QURAN
+    except ImportError:
+        pass
     ensure_fonts()
     p = PALETTES[palette_for_hour(hour)]
     img = background(p)

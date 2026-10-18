@@ -3,14 +3,20 @@
 item(k) -> ("ayah", сура, аят, текст, сквозной номер) | ("hadith", запись hadiths.json) | None"""
 import json, os
 import content as C
+import kk
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-KICKER = "СЛОВА ПОДДЕРЖКИ"
+KICKER = kk.K_SUPPORT if kk.ON else "СЛОВА ПОДДЕРЖКИ"
 
 def items():
     return json.load(open(os.path.join(HERE, "support.json"), encoding="utf-8"))
 
 def item(k):
+    if kk.ON:                                     # казахский: только аяты утешения (хадисов на казахском нет)
+        A = [it for it in items() if "ayah" in it]
+        r = A[k % len(A)]["ayah"]
+        s, a = kk.parse_ref(r) if ":" in str(r) else kk.locate(int(r))
+        return ("ayah", s, a, kk.text(s, a), kk.number(s, a))
     it = items()[k % len(items())]
     if "ayah" in it:
         d = C.get_json(f"https://api.alquran.cloud/v1/ayah/{it['ayah']}/ru.kuliev")
@@ -24,6 +30,8 @@ def item(k):
 
 def plain(x):
     """Текст для текстового поста (Threads)."""
+    if x[0] == "ayah" and kk.ON:
+        return f"«{x[3]}»\n\n{kk.caption(x[1], x[2])}"
     if x[0] == "ayah":
         return f"«{x[3]}»\n\nКоран, сура «{C.NAMES[x[1] - 1]}», аят {x[2]}. Перевод смыслов Э. Кулиева."
     h = x[1]
@@ -36,6 +44,10 @@ def cards(x):
     if x[0] == "ayah":
         _, s, a, text, _ = x
         parts = C.chunks(text)
+        if kk.ON:
+            cs = [(C.show(p, i, len(parts)), kk.ref(s, a) + (f" · {i + 1}/{len(parts)}" if len(parts) > 1 else ""),
+                   f"{kk.sura(s)}. {kk.SOURCE}", kk.K_SUPPORT) for i, p in enumerate(parts)]
+            return cs, kk.caption(s, a) + "\n\n" + kk.TAGS + " #демеу"
         src = f"Коран, {s}:{a}"
         cs = [(C.show(p, i, len(parts)), src + (f" · {i + 1}/{len(parts)}" if len(parts) > 1 else ""),
                f"Сура «{C.NAMES[s - 1]}». Перевод смыслов Э. Кулиева", KICKER) for i, p in enumerate(parts)]

@@ -6,6 +6,7 @@ import json, os, subprocess, sys, urllib.request
 from PIL import Image, ImageDraw, ImageFilter, ImageEnhance
 import render as R
 import content as C
+import kk
 
 W, H = 1080, 1920
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -18,6 +19,15 @@ def pick():
     st = json.load(open(STATE)) if os.path.exists(STATE) else {"i": 0}
     bank = [b["ref"] for b in json.load(open(os.path.join(HERE, "bank.json"), encoding="utf-8")) if not b.get("q")]
     i = int(st.get("i", 0))
+    if kk.ON:                                     # казахский: перевод Алтая (лимит длины чуть больше — казахский текст длиннее)
+        for k in range(80):
+            ref = bank[(i + k) % len(bank)]
+            s, a = kk.parse_ref(ref)
+            text = kk.text(s, a)
+            if len(text) <= MAXLEN + 40 and "Б.Ж.М" not in text:
+                json.dump({"i": i + k + 1}, open(STATE, "w"))
+                return ref, text, kk.number(s, a), s, a, i + k
+        raise SystemExit("Не нашёл короткий аят")
     for k in range(40):                           # ищем следующий короткий аят
         ref = bank[(i + k) % len(bank)]
         d = C.get_json(f"https://api.alquran.cloud/v1/ayah/{ref}/ru.kuliev")
@@ -50,13 +60,13 @@ def card_image(text, s, a, photo, kicker=None):
     d = ImageDraw.Draw(img)
     dx, dy = (w - W) // 2, (h - H) // 2
     fk = R.font("Montserrat_600SemiBold.ttf", 30)
-    sura = kicker or f"СУРА {s} · {C.NAMES[s - 1].upper()}"
+    sura = kicker or (f"{kk.NAMES[s - 1].upper()} СҮРЕСІ" if kk.ON else f"СУРА {s} · {C.NAMES[s - 1].upper()}")
     tw = d.textlength(sura, font=fk) + len(sura) * 6
     x = (w - tw) / 2; y = dy + 600
     for ch in sura:
         d.text((x, y), ch, font=fk, fill=ACC); x += d.textlength(ch, font=fk) + 6
     fa = R.font("Montserrat_400Regular.ttf", 30)
-    ref = f"Коран, {s}:{a}" if kicker else f"аят {a}"
+    ref = (kk.ref(s, a) if kicker else f"{a}-аят") if kk.ON else (f"Коран, {s}:{a}" if kicker else f"аят {a}")
     d.text(((w - d.textlength(ref, font=fa)) / 2, y + 48), ref, font=fa, fill=MUT)
     n = len(text)
     size = 86 if n < 60 else 76 if n < 100 else 66 if n < 140 else 58
@@ -67,7 +77,7 @@ def card_image(text, s, a, photo, kicker=None):
     for ln in lines:
         d.text(((w - d.textlength(ln, font=fq)) / 2, y), ln, font=fq, fill=FG); y += lh
     fs = R.font("Montserrat_400Regular.ttf", 28)
-    note = "Перевод смыслов Э. Кулиева"
+    note = kk.SOURCE if kk.ON else "Перевод смыслов Э. Кулиева"
     d.text(((w - d.textlength(note, font=fs)) / 2, dy + 1560), note, font=fs, fill=(*MUT, 200))
     import ig_render
     lg = ig_render._logo(ACC, 150)
@@ -98,6 +108,11 @@ def build(out, given=None, kicker=None):
                     "-filter_complex", f"[0:v]{vf}[v];[1:a]adelay=700|700,apad[a]", "-map", "[v]", "-map", "[a]",
                     "-t", f"{total:.2f}", "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
                     "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", out], check=True)
+    if kk.ON:
+        short = text if len(text) <= 70 else text[:text.rfind(" ", 0, 66)].rstrip(",;:—-") + "…"
+        json.dump({"title": f"«{short}» — {kk.ref(s, a)} #shorts", "description": "#құран #аят #ислам #намаз"},
+                  open(out.rsplit(".", 1)[0] + ".json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        return total
     smysl = ""
     try:
         t = C.tafsir(s, a)

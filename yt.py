@@ -5,6 +5,11 @@ python yt.py videos/112.mp4 [public|unlisted|private]
 import json, os, re, sys, urllib.request, urllib.parse, urllib.error
 
 BRAND_TAGS = "#коран #ислам #сура #жайнамаз #намазныековрики"   # на всех видео во всех соцсетях
+try:
+    import kk
+    if kk.ON: BRAND_TAGS = kk.TAGS                 # казахский режим — казахские хэштеги
+except ImportError:
+    pass
 
 def tags_only(m):
     """Подпись к видео — только хэштеги (текст уже есть в самом ролике): общие + тематические, без повторов."""
@@ -27,7 +32,7 @@ def token():
 def upload(path, title, desc, privacy="public", tags=None):
     tok = token()
     meta = {"snippet": {"title": title[:100], "description": desc[:4900], "categoryId": "22",
-                        "tags": tags or ["ummati", "коран", "намаз", "ислам", "shorts"],
+                        "tags": tags or ["ummati", "құран", "намаз", "ислам", "жайнамаз", "shorts"],
                         "defaultLanguage": "ru", "defaultAudioLanguage": "ar"},
             "status": {"privacyStatus": privacy, "selfDeclaredMadeForKids": False}}
     size = os.path.getsize(path)
