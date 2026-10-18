@@ -4,6 +4,9 @@ import math, os, random
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 import motion as M
+import sys as _sys
+_sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+import kk
 
 W, H = M.W, M.H
 PAPER, PAPER_EDGE = (242, 237, 227), (222, 212, 194)
@@ -117,9 +120,9 @@ def hadith(out, kicker, intro, body, source, bed=None):
     body_w = Ink(body, fb, INK, yb + hb / 2, t_body, read, e0 - 0.3)
     ys = body_w.bottom + 40
     src = M.Item(tblock(source, M.SANS(28), GREEN), ys + 40, t_src, e0, rise=16)
-    save = M.Item(tblock("СОХРАНИТЕ И ОТПРАВЬТЕ БЛИЗКИМ", M.SANS(24), SOFT, spacing=4), ys + 110, t_src + 0.7, e0, rise=12)
+    save = M.Item(tblock(kk.SAVE if kk.ON else "СОХРАНИТЕ И ОТПРАВЬТЕ БЛИЗКИМ", M.SANS(24), SOFT, spacing=4), ys + 110, t_src + 0.7, e0, rise=12)
     logo = ig_render._logo(INK, 230)
-    end_t = M.Item(tblock("UMMATI · НАМАЗНЫЕ КОВРИКИ", M.SANS(26), GREEN, spacing=5), 1130, e0 + 0.6, total)
+    end_t = M.Item(tblock(kk.BRAND if kk.ON else "UMMATI · НАМАЗНЫЕ КОВРИКИ", M.SANS(26), GREEN, spacing=5), 1130, e0 + 0.6, total)
 
     def scene(img, t):
         dust.draw(img, t)

@@ -6,12 +6,17 @@ import json, math, os, random, subprocess, sys, urllib.request
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
 import motion as M
 import themes
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+import kk
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(HERE, "..")
 C = (540, 640)
 GAP = 0.5
 NAMES = {"ar.husary": "Махмуд Халиль аль-Хусари", "ar.muhammadayyoub": "Мухаммад Айюб", "ar.abdulsamad": "Абдуль-Басит Абдус-Самад"}
+if kk.ON:
+    NAMES = kk.READERS
+L = (lambda k, r: k) if kk.ON else (lambda k, r: r)        # L(казахский, русский)
 BEDS = ["forest_stream", "wind_trees", "small_stream", "forest", "summer_rain", "night_rain"]
 
 def dur_of(f):
@@ -58,11 +63,13 @@ def bed_file(k):
     return os.path.join(ROOT, "sfx", have[k % len(have)] + ".mp3") if have else None
 
 def ar_size(s):  return 104 if len(s) <= 28 else 88 if len(s) <= 60 else 72 if len(s) <= 100 else 62
-def ru_size(s):  return 56 if len(s) <= 60 else 50 if len(s) <= 140 else 44 if len(s) <= 230 else 40
+def ru_size(s):
+    n = len(s) * (1.2 if kk.ON else 1)          # казахский текст длиннее — шрифт чуть меньше
+    return 56 if n <= 60 else 50 if n <= 140 else 44 if n <= 230 else 40
 
 def split_pages(ar, ru, max_ar=110):
     """Длинный аят -> страницы (арабский по словам, перевод — пропорционально), слова не меняются."""
-    k = max(1, math.ceil(len(ar) / max_ar), math.ceil(len(ru) / 260))
+    k = max(1, math.ceil(len(ar) / max_ar), math.ceil(len(ru) / (220 if kk.ON else 260)))
     aw, rw = ar.split(), ru.split()
     pa = [aw[round(i * len(aw) / k):round((i + 1) * len(aw) / k)] for i in range(k)]
     pr = [rw[round(i * len(rw) / k):round((i + 1) * len(rw) / k)] for i in range(k)]
@@ -126,7 +133,7 @@ def end_card(sc, e0, total, title, sub, reader=None):
     sc.items += [M.Item(Tx(title, M.SERIF(62), M.CREAM, glow=5, maxw=900), 1110, e0, total),
                  M.Item(Tx(sub, M.SANS(26), M.GOLD, spacing=4, maxw=980), 1210, e0 + 0.3, total)]
     if reader:
-        sc.items.append(M.Item(Tx(f"ЧТЕЦ: {NAMES.get(reader, reader).upper()}", M.SANS(24), M.MUTED, spacing=3), 1262, e0 + 0.5, total))
+        sc.items.append(M.Item(Tx(f"{L(kk.READER, 'ЧТЕЦ')}: {NAMES.get(reader, reader).upper()}", M.SANS(24), M.MUTED, spacing=3), 1262, e0 + 0.5, total))
     import ig_render
     logo = ig_render._logo(M.GOLD, 190)
     def lg(img, t):
@@ -152,8 +159,9 @@ def ayahs(out, s, sura_name, a0, ar, ru, nums, reader, repeat=False, kicker=None
                node_times=[x[2] + 0.1 for x in first][:12] if len(nums) > 1 else [first[0][2] + k * (first[0][3] - first[0][2]) / 8 for k in range(8)])
     Tx = M.text_block
     ref = f"{s}:{a0}" + (f"–{a0 + len(nums) - 1}" if len(nums) > 1 else "")
-    sc.items += [M.Item(Tx(kicker or "ПОСЛУШАЙ ДО КОНЦА", M.SANS_B(34), M.GOLD, spacing=7), 1100, 0.0, 1.4 + 0.2, fin=0.3, fout=0.4),
-                 M.Item(Tx(f"Сура «{sura_name}»", M.SERIF(96), M.CREAM, glow=6, maxw=980), 1220, 0.15, 1.6, fin=0.35, fout=0.4)]
+    sura_t = f"«{sura_name}» сүресі" if kk.ON else f"Сура «{sura_name}»"
+    sc.items += [M.Item(Tx(kicker or L(kk.K_LISTEN, "ПОСЛУШАЙ ДО КОНЦА"), M.SANS_B(34), M.GOLD, spacing=7), 1100, 0.0, 1.4 + 0.2, fin=0.3, fout=0.4),
+                 M.Item(Tx(sura_t, M.SERIF(96), M.CREAM, glow=6, maxw=980), 1220, 0.15, 1.6, fin=0.35, fout=0.4)]
     sc.parts.append(M.Particles(150, 1, intro_kind(), C, 0.0, 1.6, spread=700))
     sc.parts.append(M.Particles(130, 4, "orbit", C, 1.5, total - 2, spread=330))
     for p, i, st, en in slots:
@@ -171,8 +179,8 @@ def ayahs(out, s, sura_name, a0, ar, ru, nums, reader, repeat=False, kicker=None
             sc.words.append(M.Words(pa, fa, M.CREAM, top + ha / 2, tt, span * 0.85, end_p, maxw=960, rtl=True, glow=6))
             sc.words.append(M.Words(pr, fr, M.MUTED, top + ha + 40 + hr / 2, tt + 0.25, span * 0.85, end_p, maxw=900))
             tt += span
-        sc.items.append(M.Item(Tx(f"КОРАН, {s}:{a0 + i}" + (" · ПОВТОР" if p else ""), M.SANS(26), M.GOLD, spacing=4), 1600, st + 0.4, nxt))
-    end_card(sc, e0, total, f"Сура «{sura_name}», {ref}", "ПЕРЕВОД СМЫСЛОВ Э. КУЛИЕВА", reader)
+        sc.items.append(M.Item(Tx(f"{L('ҚҰРАН', 'КОРАН')}, {s}:{a0 + i}" + (f" · {L(kk.REPEAT, 'ПОВТОР')}" if p else ""), M.SANS(26), M.GOLD, spacing=4), 1600, st + 0.4, nxt))
+    end_card(sc, e0, total, f"{sura_t}, {ref}", L(kk.SOURCE.upper(), "ПЕРЕВОД СМЫСЛОВ Э. КУЛИЕВА"), reader)
     M.render(sc, out, total, audio)
     return total
 
@@ -207,8 +215,8 @@ def text_piece(out, kicker, intro, body, source, idx=0):
     sc.words.append(M.Words(body, fb, M.CREAM, yb + hb / 2, t_intro + 0.6, read, e0 - 0.2, maxw=900, glow=3))
     ys = min(1800, yb + hb + 70)
     sc.items.append(M.Item(Tx(source, M.SANS(28), M.GOLD, maxw=900), ys, t_src, e0))
-    sc.items.append(M.Item(Tx("СОХРАНИТЕ И ОТПРАВЬТЕ БЛИЗКИМ", M.SANS(24), M.MUTED, spacing=4), min(1860, ys + 80), t_src + 0.8, e0))
-    end_card(sc, e0, total, kicker.capitalize() if kicker.isupper() else kicker, "UMMATI · НАМАЗНЫЕ КОВРИКИ")
+    sc.items.append(M.Item(Tx(L(kk.SAVE, "СОХРАНИТЕ И ОТПРАВЬТЕ БЛИЗКИМ"), M.SANS(24), M.MUTED, spacing=4), min(1860, ys + 80), t_src + 0.8, e0))
+    end_card(sc, e0, total, kicker.capitalize() if kicker.isupper() else kicker, L(kk.BRAND, "UMMATI · НАМАЗНЫЕ КОВРИКИ"))
     M.render(sc, out, total, audio)
     return total
 
@@ -216,7 +224,7 @@ def text_piece(out, kicker, intro, body, source, idx=0):
 def sale(out, k=0):
     themes.pick(out)
     work = out.rsplit(".", 1)[0] + "_m"; os.makedirs(work, exist_ok=True)
-    cfg = json.load(open(os.path.join(ROOT, "ig_content.json"), encoding="utf-8"))
+    cfg = json.load(open(os.path.join(ROOT, "ig_content_kk.json" if kk.ON else "ig_content.json"), encoding="utf-8"))
     off = cfg["offer"]
     promos = [p for p in cfg["promos"] if os.path.exists(os.path.join(ROOT, p[0]))]
     pick = [promos[(k * 3 + i) % len(promos)] for i in range(3)]
@@ -252,13 +260,13 @@ def sale(out, k=0):
         t0 = 0.4 + i * T_SHOT
         sc.items.append(M.Item(Tx(title, M.SERIF(64), M.CREAM, glow=5, maxw=900), 1390, t0 + 0.4, t0 + T_SHOT + 0.2))
         sc.shocks.append(t0)
-    sc.items.append(M.Item(Tx("UMMATI · НАМАЗНЫЕ КОВРИКИ", M.SANS_B(28), M.GOLD, spacing=6), 1520, 0.6, t_off))
+    sc.items.append(M.Item(Tx(L(kk.BRAND, "UMMATI · НАМАЗНЫЕ КОВРИКИ"), M.SANS_B(28), M.GOLD, spacing=6), 1520, 0.6, t_off))
     sc.shocks.append(t_off)
     sc.parts.append(M.Particles(110, 9, "burst", C, t_off, t_off + 2.4, spread=560))
     sc.items += [M.Item(Tx(off["kicker"].upper(), M.SANS_B(40), M.GOLD, spacing=8), 1000, t_off + 0.1, total),
                  M.Item(Tx(off["title"], M.SERIF(104), M.CREAM, glow=8, maxw=980), 1130, t_off + 0.4, total),
                  M.Item(Tx(off["body"], M.SERIF(48), M.MUTED, maxw=880), 1290, t_off + 1.0, total),
-                 M.Item(Tx("ПИШИТЕ В ДИРЕКТ ИЛИ WHATSAPP", M.SANS_B(30), M.GOLD, spacing=5), 1470, t_off + 1.8, total)]
+                 M.Item(Tx(L(kk.WRITE, "ПИШИТЕ В ДИРЕКТ ИЛИ WHATSAPP"), M.SANS_B(30), M.GOLD, spacing=5), 1470, t_off + 1.8, total)]
     import ig_render
     logo = ig_render._logo(M.GOLD, 170)
     def lg(img, t):
@@ -306,7 +314,7 @@ def rug_reel(out, shots, kicker, title, lines, k=0, icons=None):
         sc.items.append(M.Item(Tx(t, M.SERIF(64), M.CREAM, glow=5, maxw=900), 1360, t0 + 0.4, t0 + T_SHOT + 0.2))
         if sub: sc.items.append(M.Item(Tx(sub, M.SANS(30), M.MUTED, maxw=880), 1450, t0 + 0.7, t0 + T_SHOT + 0.2))
         sc.shocks.append(t0)
-    sc.items.append(M.Item(Tx("UMMATI · НАМАЗНЫЕ КОВРИКИ", M.SANS_B(28), M.GOLD, spacing=6), 1560, 0.6, t_off))
+    sc.items.append(M.Item(Tx(L(kk.BRAND, "UMMATI · НАМАЗНЫЕ КОВРИКИ"), M.SANS_B(28), M.GOLD, spacing=6), 1560, 0.6, t_off))
     sc.shocks.append(t_off)
     sc.parts.append(M.Particles(110, 9, "burst", C, t_off, t_off + 2.4, spread=560))
     sc.items += [M.Item(Tx(kicker.upper(), M.SANS_B(40), M.GOLD, spacing=8), 960, t_off + 0.1, total),
@@ -323,7 +331,7 @@ def rug_reel(out, shots, kicker, title, lines, k=0, icons=None):
     for j, ln in enumerate(lines):
         sc.items.append(M.Item(Tx(ln, M.SERIF(46), M.MUTED, maxw=900), y + j * 64, t_off + 1.0 + j * 0.2, total))
     y += len(lines) * 64 + 40
-    sc.items += [M.Item(Tx("ПИШИТЕ В ДИРЕКТ ИЛИ WHATSAPP", M.SANS_B(30), M.GOLD, spacing=5), y, t_off + 1.8, total),
+    sc.items += [M.Item(Tx(L(kk.WRITE, "ПИШИТЕ В ДИРЕКТ ИЛИ WHATSAPP"), M.SANS_B(30), M.GOLD, spacing=5), y, t_off + 1.8, total),
                  M.Item(Tx(WHATSAPP, M.SANS_B(44), M.CREAM, spacing=2), y + 70, t_off + 2.1, total)]
     import ig_render
     logo = ig_render._logo(M.GOLD, 150)
