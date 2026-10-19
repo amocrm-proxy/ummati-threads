@@ -1,7 +1,5 @@
 name: Uagyz
 on:
-  schedule:
-    - cron: "7 4,7,10,13,16 * * *"  # 09:07, 12:07, 15:07, 18:07, 21:07 по Алматы — по одному ролику
   workflow_dispatch:
     inputs:
       mode:
