@@ -5,8 +5,9 @@ import json, os, subprocess, sys, time
 
 src, out = sys.argv[1], sys.argv[2]
 os.makedirs(out, exist_ok=True)
-wav = os.path.join(out, "_audio.wav")
-subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", src, "-vn", "-ac", "1", "-ar", "16000", wav], check=True)
+import numpy as np                              # звук декодируем сами (ffmpeg), без PyAV — у него ломается совместимость
+audio = np.frombuffer(subprocess.run(["ffmpeg", "-v", "error", "-i", src, "-vn", "-ac", "1", "-ar", "16000", "-f", "f32le", "-"],
+                                     capture_output=True, check=True).stdout, np.float32)
 dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", src],
                            capture_output=True, text=True).stdout.strip())
 info = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height",
@@ -16,7 +17,7 @@ print("Видео:", round(dur), "сек,", info)
 from faster_whisper import WhisperModel
 model = WhisperModel(os.environ.get("WHISPER_MODEL", "medium"), device="cpu", compute_type="int8")
 t0 = time.time()
-segs, meta = model.transcribe(wav, language="kk", word_timestamps=True, vad_filter=True,
+segs, meta = model.transcribe(audio, language="kk", word_timestamps=True, vad_filter=True,
                               vad_parameters={"min_silence_duration_ms": 400}, beam_size=5)
 res = []
 for s in segs:
@@ -29,5 +30,4 @@ json.dump({"source": os.path.basename(src), "duration": dur, "size": info, "segm
 with open(os.path.join(out, "transcript.txt"), "w", encoding="utf-8") as f:
     for s in res:
         f.write(f"[{int(s['start'] // 60):02d}:{s['start'] % 60:05.2f} – {int(s['end'] // 60):02d}:{s['end'] % 60:05.2f}] {s['text']}\n")
-os.remove(wav)
 print("Готово:", len(res), "сегментов за", round(time.time() - t0), "с")
