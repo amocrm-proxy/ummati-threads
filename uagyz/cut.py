@@ -39,12 +39,12 @@ def overlay(ustaz, path):
     b2 = "@ummati.family"; d.text(((W - d.textlength(b2, font=f4)) / 2, 1758), b2, font=f4, fill=(*CREAM, 230))
     im.save(path)
 
-def cut(src, a, b, ustaz, out, work):
+def cut(src, a, b, ustaz, out, work, cx=0.5):
     png = os.path.join(work, "overlay.png"); overlay(ustaz, png)
     fg_h = 1350
     vf = (f"[0:v]split[bg0][fg0];"
           f"[bg0]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},boxblur=30:2,eq=brightness=-0.22[bg];"
-          f"[fg0]crop='min(iw,ih*4/5)':ih,scale={W}:{fg_h},setsar=1[fg];"
+          f"[fg0]crop='min(iw,ih*4/5)':ih:'max(0,min(iw-min(iw,ih*4/5),iw*{cx}-min(iw,ih*4/5)/2))':0,scale={W}:{fg_h},setsar=1[fg];"
           f"[bg][fg]overlay=0:{FG_Y}[v0];[v0][1:v]overlay=0:0,format=yuv420p[v]")
     dur = b - a
     subprocess.run(["ffmpeg", "-y", "-v", "error", "-ss", f"{a:.2f}", "-t", f"{dur:.2f}", "-i", src, "-i", png,
@@ -63,5 +63,5 @@ if __name__ == "__main__":
         if b - a > 60:
             b = a + 60
         out = os.path.join(outdir, f"{c['id']}.mp4")
-        cut(src, a, b, cfg["ustaz"], out, outdir)
+        cut(src, a, b, cfg["ustaz"], out, outdir, float(cfg.get("crop_x", 0.5)))
         print("Ролик", c["id"], f"{a:.1f}–{b:.1f}", f"({b - a:.1f} с)")
