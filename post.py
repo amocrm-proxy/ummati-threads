@@ -148,7 +148,18 @@ if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # Shorts/Ti
         print("YouTube Shorts: сборка запущена", inputs)
     except BaseException as e:
         print("YouTube Shorts: не удалось запустить:", e)
-if slot in [v for k, v in used.items() if not k.startswith(("ig", "yt"))] and not dry:
+ug_key = f"ug {slot[:13]}"
+if hour in (9, 12, 15, 18, 21) and not dry and ug_key not in used:   # уағыз: следующий ролик (Instagram или Telegram) — 5 раз в день
+    try:
+        urllib.request.urlopen(urllib.request.Request(
+            f"https://api.github.com/repos/{REPO}/actions/workflows/uagyz.yml/dispatches", method="POST", headers=GH_HDR,
+            data=json.dumps({"ref": "main", "inputs": {"mode": "post"}}).encode()), timeout=30)
+        used[ug_key] = "ug"
+        put_file("used.json", json.dumps(used, ensure_ascii=False, indent=1).encode(), ug_key)
+        print("Уағыз: публикация запущена")
+    except BaseException as e:
+        print("Уағыз: не удалось запустить:", e)
+if slot in [v for k, v in used.items() if not k.startswith(("ig", "yt", "ug"))] and not dry:
     print(f"{slot} уже опубликован"); sys.exit(0)
 
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pillow"], check=True)
