@@ -20,6 +20,8 @@ jobs:
       PYTHONUNBUFFERED: "1"
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -42,4 +44,12 @@ jobs:
           git config user.email "bot@users.noreply.github.com"
           git add "uagyz/$TAG"
           git commit -m "uagyz transcript $TAG"
-          for i in 1 2 3; do git pull --rebase --autostash -q && git push && break; sleep 5; done
+          ok=0
+          for i in 1 2 3 4 5; do git pull --rebase --autostash -q origin main && git push origin HEAD:main && ok=1 && break; sleep 10; done
+          [ $ok = 1 ]
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: transcript-${{ env.TAG }}
+          path: uagyz/${{ env.TAG }}
+          if-no-files-found: ignore
