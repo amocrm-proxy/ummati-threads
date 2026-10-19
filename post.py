@@ -106,7 +106,7 @@ subprocess.run([sys.executable, "ig.py"], env=dict(os.environ, SLOT=("dry:" if d
 schedule = json.load(open("schedule.json", encoding="utf-8"))
 post = schedule.get(slot)
 used = json.load(open("used.json", encoding="utf-8")) if os.path.exists("used.json") else {}
-if not dry:                                       # Telegram-бот: забираем голосовые для рубрики «Размышление»
+if False:                                         # Telegram-бот «Размышление» (аяты для голосовых) отключён по просьбе Арсена 19/10/2026
     try:
         import tg
         tg.run(put_file, datetime.datetime.now(ZoneInfo("Asia/Almaty")))
