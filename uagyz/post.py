@@ -87,7 +87,7 @@ def main():
         rel, cfg, c, posted = queue()
         if not rel:
             print("Очередь пуста — новых роликов нет"); return
-        caption = (c.get("caption") or cfg.get("caption") or cfg.get("ustaz") or "Ұстаздардың уағызы") + "\n\n" + TAGS + "\n\nЖайнамаздар: @ummati.family"
+        caption = (c.get("caption") or "\n".join(x for x in (c.get("topic"), cfg.get("caption") or cfg.get("ustaz") or "Ұстаздардың уағызы") if x)) + "\n\n" + TAGS + "\n\nЖайнамаздар: @ummati.family"
         print("Telegram:", rel, telegram(os.path.join(HERE, "..", rel), caption))
         posted.append(rel)
         json.dump(posted, open(STATE, "w"), indent=1)
@@ -99,7 +99,7 @@ def main():
     if not rel:
         print("Очередь пуста — новых роликов нет"); return
     url = f"https://raw.githubusercontent.com/{REPO}/main/{urllib.parse.quote(rel)}"
-    caption = (c.get("caption") or cfg.get("caption") or cfg.get("ustaz") or "Ұстаздардың уағызы") + "\n\n" + TAGS + "\n\nЖайнамаздар: @ummati.family"
+    caption = (c.get("caption") or "\n".join(x for x in (c.get("topic"), cfg.get("caption") or cfg.get("ustaz") or "Ұстаздардың уағызы") if x)) + "\n\n" + TAGS + "\n\nЖайнамаздар: @ummati.family"
     cid = call("POST", f"{uid}/media", media_type="REELS", video_url=url, caption=caption, share_to_feed="true")["id"]
     for _ in range(60):
         st = call("GET", cid, fields="status_code").get("status_code")
