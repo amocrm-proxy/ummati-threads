@@ -13,10 +13,11 @@ jobs:
   transcribe:
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'uagyz') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 355
     env:
       TAG: ${{ github.event.release.tag_name || inputs.tag }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PYTHONUNBUFFERED: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
