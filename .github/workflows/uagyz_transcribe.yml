@@ -1,0 +1,43 @@
+name: Uagyz transcribe
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Тег релиза с видео, например uagyz-1"
+        required: true
+permissions:
+  contents: write
+jobs:
+  transcribe:
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'uagyz') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: whisper-medium
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - run: pip install -q faster-whisper
+      - run: |
+          mkdir -p _in
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -D _in
+          ls -la _in
+      - run: |
+          f=$(ls -S _in/* | head -1)
+          python uagyz/transcribe.py "$f" "uagyz/$TAG"
+      - run: |
+          git config user.name "ummati-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add "uagyz/$TAG"
+          git commit -m "uagyz transcript $TAG"
+          for i in 1 2 3; do git pull --rebase --autostash -q && git push && break; sleep 5; done
