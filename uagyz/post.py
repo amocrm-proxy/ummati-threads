@@ -1,6 +1,7 @@
 """Уағыз: публикует следующий готовый ролик (uagyz/<тег>/clips/*.mp4) в Instagram страницы уағыз как Reels.
 Ключ — секрет UAGYZ_IG_TOKEN (бессрочный ключ страницы Facebook, к которой привязан этот Instagram).
-Очередь — по порядку тегов и номеров; опубликованные записываются в uagyz/posted.json."""
+Очередь — по порядку тегов и номеров; опубликованные записываются в uagyz/posted.json.
+Без UAGYZ_IG_TOKEN ролик с готовой подписью уходит владельцу в Telegram (бот TG_TOKEN), публикует он сам."""
 import glob, json, os, sys, time, urllib.parse, urllib.request, urllib.error
 
 G = "https://graph.facebook.com/v21.0"
@@ -53,9 +54,35 @@ def queue():
                 return rel, cfg, c, posted
     return None, None, None, posted
 
+def telegram(path, caption):
+    """Отправить ролик владельцу бота (tg_state.json -> owner) с подписью для копирования."""
+    import uuid
+    tok = os.environ.get("TG_TOKEN", "").strip()
+    owner = json.load(open(os.path.join(HERE, "..", "tg_state.json"))).get("owner")
+    if not tok or not owner:
+        sys.exit("Нет TG_TOKEN или владельца бота — некуда отправить ролик")
+    b = uuid.uuid4().hex
+    parts = []
+    for k, v in (("chat_id", str(owner)), ("caption", caption[:1000]), ("supports_streaming", "true")):
+        parts.append(f"--{b}\r\nContent-Disposition: form-data; name=\"{k}\"\r\n\r\n{v}\r\n".encode())
+    parts.append(f"--{b}\r\nContent-Disposition: form-data; name=\"video\"; filename=\"{os.path.basename(path)}\"\r\n"
+                 "Content-Type: video/mp4\r\n\r\n".encode() + open(path, "rb").read() + b"\r\n")
+    parts.append(f"--{b}--\r\n".encode())
+    req = urllib.request.Request(f"https://api.telegram.org/bot{tok}/sendVideo", data=b"".join(parts), method="POST",
+                                 headers={"Content-Type": f"multipart/form-data; boundary={b}"})
+    with urllib.request.urlopen(req, timeout=300) as r:
+        return json.load(r)["ok"]
+
 def main():
-    if not TOKEN:
-        sys.exit("UAGYZ_IG_TOKEN не задан")
+    if not TOKEN:                                 # Instagram ещё не подключён — отправляем ролик в Telegram
+        rel, cfg, c, posted = queue()
+        if not rel:
+            print("Очередь пуста — новых роликов нет"); return
+        caption = (c.get("caption") or cfg["ustaz"]) + "\n\n" + TAGS + "\n\nЖайнамаздар: @ummati.family"
+        print("Telegram:", rel, telegram(os.path.join(HERE, "..", rel), caption))
+        posted.append(rel)
+        json.dump(posted, open(STATE, "w"), indent=1)
+        return
     uid = check()
     if os.environ.get("CHECK_ONLY"):
         return
