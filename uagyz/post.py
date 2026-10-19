@@ -42,8 +42,11 @@ def check():
     return uid
 
 def queue():
+    """Следующий ролик: видео чередуются по кругу (после ролика из одного видео — следующее видео, где ещё есть ролики)."""
     posted = json.load(open(STATE)) if os.path.exists(STATE) else []
-    for tag_dir in sorted(glob.glob(os.path.join(HERE, "uagyz-*")), key=lambda p: int(p.rsplit("-", 1)[-1]) if p.rsplit("-", 1)[-1].isdigit() else 0):
+    tags = sorted(glob.glob(os.path.join(HERE, "uagyz-*")), key=lambda p: int(p.rsplit("-", 1)[-1]) if p.rsplit("-", 1)[-1].isdigit() else 0)
+    ready = []                                    # [(папка, cfg, первый неопубликованный ролик, путь)]
+    for tag_dir in tags:
         cfg_p = os.path.join(tag_dir, "clips.json")
         if not os.path.exists(cfg_p):
             continue
@@ -51,8 +54,14 @@ def queue():
         for c in cfg["clips"]:
             rel = os.path.relpath(os.path.join(tag_dir, "clips", f"{c['id']}.mp4"), os.path.join(HERE, ".."))
             if rel not in posted and os.path.exists(os.path.join(HERE, "..", rel)):
-                return rel, cfg, c, posted
-    return None, None, None, posted
+                ready.append((os.path.basename(tag_dir), cfg, c, rel)); break
+    if not ready:
+        return None, None, None, posted
+    num = lambda name: int(name.rsplit("-", 1)[-1]) if name.rsplit("-", 1)[-1].isdigit() else 0
+    last = num(posted[-1].split("/")[1]) if posted else 0
+    later = [r for r in ready if num(r[0]) > last]
+    pick = min(later or ready, key=lambda r: num(r[0]))
+    return pick[3], pick[1], pick[2], posted
 
 def telegram(path, caption):
     """Отправить ролик владельцу бота (tg_state.json -> owner) с подписью для копирования."""
