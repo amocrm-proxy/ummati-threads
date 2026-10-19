@@ -26,18 +26,23 @@ def snap(t, words, side):
         c = min(words, key=lambda w: abs(w[0] - t)); return max(0.0, c[0] - 0.25)
     c = min(words, key=lambda w: abs(w[1] - t)); return c[1] + 0.45
 
-def overlay(ustaz, path, top, bottom):
-    """top — верх видео, bottom — низ видео: имя устаза над видео, бренд под ним."""
+def overlay(ustaz, path, top, bottom, kicker="УАҒЫЗ"):
+    """top — верх видео, bottom — низ видео: имя устаза над видео (если известно), бренд под ним."""
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
-    f1 = font("Montserrat_600SemiBold.ttf", 32); f2 = font("CormorantGaramond_500Medium.ttf", 76)
-    t1 = "УАҒЫЗ"; d.text(((W - d.textlength(t1, font=f1)) / 2, top - 175), t1, font=f1, fill=(*GOLD, 255))
-    d.text(((W - d.textlength(ustaz, font=f2)) / 2, top - 128), ustaz, font=f2, fill=(*CREAM, 255))
+    f1 = font("Montserrat_600SemiBold.ttf", 32 if ustaz else 40); f2 = font("CormorantGaramond_500Medium.ttf", 76)
+    if ustaz:
+        d.text(((W - d.textlength(kicker, font=f1)) / 2, top - 175), kicker, font=f1, fill=(*GOLD, 255))
+        d.text(((W - d.textlength(ustaz, font=f2)) / 2, top - 128), ustaz, font=f2, fill=(*CREAM, 255))
+    else:                                        # без имени (подкаст, несколько устазов) — только заголовок рубрики
+        sp = 10; w = sum(d.textlength(c, font=f1) for c in kicker) + sp * (len(kicker) - 1); x = (W - w) / 2
+        for c in kicker:
+            d.text((x, top - 100), c, font=f1, fill=(*GOLD, 255)); x += d.textlength(c, font=f1) + sp
     f3 = font("Montserrat_600SemiBold.ttf", 30); f4 = font("Montserrat_400Regular.ttf", 32)
     b1 = "UMMATI · ЖАЙНАМАЗДАР"; d.text(((W - d.textlength(b1, font=f3)) / 2, bottom + 60), b1, font=f3, fill=(*GOLD, 255))
     b2 = "@ummati.family"; d.text(((W - d.textlength(b2, font=f4)) / 2, bottom + 108), b2, font=f4, fill=(*CREAM, 230))
     im.save(path)
 
-def cut(src, a, b, ustaz, out, work, cx=0.5, layout="full"):
+def cut(src, a, b, ustaz, out, work, cx=0.5, layout="full", kicker="УАҒЫЗ"):
     """layout=full — весь кадр 16:9 по ширине (безопасно при смене планов камеры), crop — обрезка 4:5 вокруг cx."""
     png = os.path.join(work, "overlay.png")
     if layout == "crop":
@@ -46,7 +51,7 @@ def cut(src, a, b, ustaz, out, work, cx=0.5, layout="full"):
     else:
         fg_h = 608; y = (H - fg_h) // 2
         fg = f"scale={W}:{fg_h},setsar=1"
-    overlay(ustaz, png, y, y + fg_h)
+    overlay(ustaz, png, y, y + fg_h, kicker)
     vf = (f"[0:v]split[bg0][fg0];"
           f"[bg0]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},boxblur=30:2,eq=brightness=-0.25[bg];"
           f"[fg0]{fg}[fg];"
@@ -68,5 +73,6 @@ if __name__ == "__main__":
         if b - a > 60:
             b = a + 60
         out = os.path.join(outdir, f"{c['id']}.mp4")
-        cut(src, a, b, cfg["ustaz"], out, outdir, float(cfg.get("crop_x", 0.5)), cfg.get("layout", "full"))
+        cut(src, a, b, cfg.get("ustaz", ""), out, outdir, float(cfg.get("crop_x", 0.5)), cfg.get("layout", "full"),
+            cfg.get("kicker", "УАҒЫЗ"))
         print("Ролик", c["id"], f"{a:.1f}–{b:.1f}", f"({b - a:.1f} с)")
