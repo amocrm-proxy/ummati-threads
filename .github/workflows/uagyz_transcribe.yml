@@ -35,6 +35,7 @@ jobs:
       - run: |
           f=$(ls -S _in/* | head -1)
           python uagyz/transcribe.py "$f" "uagyz/$TAG"
+          for s in 60 300 600; do ffmpeg -v error -y -ss $s -i "$f" -frames:v 1 -q:v 3 "uagyz/$TAG/frame_$s.jpg" || true; done
       - run: |
           git config user.name "ummati-bot"
           git config user.email "bot@users.noreply.github.com"

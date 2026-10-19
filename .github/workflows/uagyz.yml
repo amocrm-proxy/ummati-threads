@@ -1,0 +1,50 @@
+name: Uagyz
+on:
+  schedule:
+    - cron: "17 5,10,15 * * *"      # 10:17, 15:17, 20:17 по Алматы — по одному ролику
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "cut — нарезать по clips.json, post — опубликовать следующий, check — проверить ключ"
+        default: "post"
+      tag:
+        description: "Тег релиза для нарезки, например uagyz-1"
+        default: ""
+permissions:
+  contents: write
+concurrency: uagyz
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      MODE: ${{ inputs.mode || 'post' }}
+      TAG: ${{ inputs.tag }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      UAGYZ_IG_TOKEN: ${{ secrets.UAGYZ_IG_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - if: env.MODE == 'cut'
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          pip install -q pillow
+          python -c "import render; render.ensure_fonts()"
+          mkdir -p _in && gh release download "$TAG" -R "$GITHUB_REPOSITORY" -D _in
+          f=$(ls -S _in/* | head -1)
+          python uagyz/cut.py "$f" "uagyz/$TAG/clips.json" "uagyz/$TAG/clips"
+          rm -f "uagyz/$TAG/clips/overlay.png"
+      - if: env.MODE == 'post' && env.UAGYZ_IG_TOKEN != ''
+        run: python uagyz/post.py
+      - if: env.MODE == 'check'
+        run: CHECK_ONLY=1 python uagyz/post.py
+      - if: env.MODE != 'check'
+        run: |
+          git config user.name "ummati-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add uagyz
+          git diff --cached --quiet && exit 0
+          git commit -m "uagyz $MODE $TAG"
+          for i in 1 2 3; do git pull --rebase --autostash -q && git push && break; sleep 5; done
