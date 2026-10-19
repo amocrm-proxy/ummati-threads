@@ -22,6 +22,7 @@ jobs:
       TAG: ${{ inputs.tag }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       UAGYZ_IG_TOKEN: ${{ secrets.UAGYZ_IG_TOKEN }}
+      TG_TOKEN: ${{ secrets.TG_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -36,7 +37,7 @@ jobs:
           f=$(ls -S _in/* | head -1)
           python uagyz/cut.py "$f" "uagyz/$TAG/clips.json" "uagyz/$TAG/clips"
           rm -f "uagyz/$TAG/clips/overlay.png"
-      - if: env.MODE == 'post' && env.UAGYZ_IG_TOKEN != ''
+      - if: env.MODE == 'post'
         run: python uagyz/post.py
       - if: env.MODE == 'check'
         run: CHECK_ONLY=1 python uagyz/post.py
