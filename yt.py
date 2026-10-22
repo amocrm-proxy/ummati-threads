@@ -29,11 +29,11 @@ def token():
     except urllib.error.HTTPError as e:
         sys.exit(f"Google не выдал доступ ({e.code}): {e.read().decode()[:300]}")
 
-def upload(path, title, desc, privacy="public", tags=None):
+def upload(path, title, desc, privacy="public", tags=None, lang="ru", audio="ar"):
     tok = token()
     meta = {"snippet": {"title": title[:100], "description": desc[:4900], "categoryId": "22",
                         "tags": tags or ["ummati", "құран", "намаз", "ислам", "жайнамаз", "shorts"],
-                        "defaultLanguage": "ru", "defaultAudioLanguage": "ar"},
+                        "defaultLanguage": lang, "defaultAudioLanguage": audio},
             "status": {"privacyStatus": privacy, "selfDeclaredMadeForKids": False}}
     size = os.path.getsize(path)
     req = urllib.request.Request(

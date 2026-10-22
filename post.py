@@ -149,11 +149,11 @@ if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # Shorts/Ti
     except BaseException as e:
         print("YouTube Shorts: не удалось запустить:", e)
 ug_key = f"ug {slot[:13]}"
-if hour in (9, 12, 15, 18, 21) and not dry and ug_key not in used:   # уағыз: следующий ролик (Instagram или Telegram) — 5 раз в день
+if hour in (9, 12, 15, 18, 21) and not dry and ug_key not in used:   # уағыз: следующий ролик (Instagram или Telegram) — 5 раз в день; в 15:00 ещё один — на YouTube Ummati
     try:
         urllib.request.urlopen(urllib.request.Request(
             f"https://api.github.com/repos/{REPO}/actions/workflows/uagyz.yml/dispatches", method="POST", headers=GH_HDR,
-            data=json.dumps({"ref": "main", "inputs": {"mode": "post"}}).encode()), timeout=30)
+            data=json.dumps({"ref": "main", "inputs": {"mode": "post_yt" if hour == 15 else "post"}}).encode()), timeout=30)
         used[ug_key] = "ug"
         put_file("used.json", json.dumps(used, ensure_ascii=False, indent=1).encode(), ug_key)
         print("Уағыз: публикация запущена")
