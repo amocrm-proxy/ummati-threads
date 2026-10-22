@@ -12,6 +12,7 @@ REPO = os.environ["GITHUB_REPOSITORY"]
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.path.join(HERE, "posted.json")
 YT_STATE = os.path.join(HERE, "yt_posted.json")
+TT_STATE = os.path.join(HERE, "tt_posted.json")
 TAGS = "#уағыз #ислам #құран #намаз #иман #дін #қазақша"
 
 def call(method, path, **params):
@@ -111,6 +112,21 @@ def youtube():
     posted.append(rel)
     json.dump(posted, open(YT_STATE, "w"), indent=1)
 
+def tiktok():
+    """Следующий ролик уағыз — в TikTok Ummati (1 в день, в 20:00; ключи TT_* те же, что у роликов Ummati)."""
+    import shutil
+    sys.path.insert(0, os.path.join(HERE, ".."))
+    import tiktok as tt
+    rel, cfg, c, posted = queue(TT_STATE)
+    if not rel:
+        print("TikTok: очередь пуста"); return
+    tmp = "/tmp/uagyz_tt.mp4"
+    shutil.copy(os.path.join(HERE, "..", rel), tmp)
+    json.dump({"caption": TAGS}, open(tmp[:-4] + ".json", "w"), ensure_ascii=False)
+    tt.publish(tmp)
+    posted.append(rel)
+    json.dump(posted, open(TT_STATE, "w"), indent=1)
+
 def main():
     if not TOKEN:                                 # Instagram ещё не подключён — отправляем ролик в Telegram
         rel, cfg, c, posted = queue()
@@ -144,4 +160,4 @@ def main():
     json.dump(posted, open(STATE, "w"), indent=1)
 
 if __name__ == "__main__":
-    youtube() if sys.argv[1:] == ["yt"] else main()
+    {"yt": youtube, "tt": tiktok}.get((sys.argv[1:] or [""])[0], main)()
