@@ -125,6 +125,8 @@ if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # Shorts/Ti
             kind = "ayah"
         if hour == 15:
             kind = "hadith"
+        if hour == 18:                                               # 18 — «Жүрекке демеу» (поддержка)
+            kind = "support"
         if hour == 21:                                               # ролик с ковриками — каждый день в 21:00
             kind = "sale"
         if kind == "ayah":
@@ -140,7 +142,7 @@ if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # Shorts/Ti
                 print("Telegram:", e)
             if vref:
                 spec = f"voice:{vref}"
-        YOUTUBE = hour in (9, 15, 21)                 # лимит API ~6 загрузок в сутки: 3 Ummati (9, 15, 21) + 3 уағыз (12, 18, 21)
+        YOUTUBE = True                                # лимит API ~6 загрузок в сутки: 5 Ummati (все слоты) + 1 уағыз (18:00)
         inputs = {"spec": spec, "youtube": "true" if YOUTUBE or spec.startswith("voice") else "false", "reels": "true", "tiktok": "true", "threads": "true"}
         urllib.request.urlopen(urllib.request.Request(
             f"https://api.github.com/repos/{REPO}/actions/workflows/video.yml/dispatches", method="POST", headers=GH_HDR,
@@ -153,11 +155,11 @@ if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # Shorts/Ti
     except BaseException as e:
         print("YouTube Shorts: не удалось запустить:", e)
 ug_key = f"ug {slot[:13]}"
-if hour in (9, 12, 15, 18, 21) and not dry and ug_key not in used:   # уағыз: следующий ролик (Instagram или Telegram) — 5 раз в день; в 12, 18 и 21 ещё и на YouTube Ummati
+if hour in (9, 12, 15, 18, 21) and not dry and ug_key not in used:   # уағыз: следующий ролик (Instagram или Telegram) — 5 раз в день; в 18 ещё и на YouTube Ummati
     try:
         urllib.request.urlopen(urllib.request.Request(
             f"https://api.github.com/repos/{REPO}/actions/workflows/uagyz.yml/dispatches", method="POST", headers=GH_HDR,
-            data=json.dumps({"ref": "main", "inputs": {"mode": "post_yt" if hour in (12, 18, 21) else "post"}}).encode()), timeout=30)
+            data=json.dumps({"ref": "main", "inputs": {"mode": "post_yt" if hour == 18 else "post"}}).encode()), timeout=30)
         used[ug_key] = "ug"
         put_file("used.json", json.dumps(used, ensure_ascii=False, indent=1).encode(), ug_key)
         print("Уағыз: публикация запущена")
