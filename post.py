@@ -101,8 +101,12 @@ def category(hour):
 slot = os.environ.get("SLOT") or datetime.datetime.now(ZoneInfo("Asia/Almaty")).strftime("%Y-%m-%dT%H:00")
 dry = slot.startswith("dry:")
 slot = slot[4:] if dry else slot
+ig_only = slot.startswith("ig:")                  # SLOT=ig:2026-10-22T19:30 — только Instagram (перевыложить), без Threads и видео
+slot = slot[3:] if ig_only else slot
 hour = int(slot[11:13])
 subprocess.run([sys.executable, "ig.py"], env=dict(os.environ, SLOT=("dry:" if dry else "") + slot))
+if ig_only:
+    sys.exit(0)
 schedule = json.load(open("schedule.json", encoding="utf-8"))
 post = schedule.get(slot)
 used = json.load(open("used.json", encoding="utf-8")) if os.path.exists("used.json") else {}
