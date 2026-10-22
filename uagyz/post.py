@@ -3,7 +3,7 @@
 Очередь — по порядку тегов и номеров; опубликованные записываются в uagyz/posted.json.
 Без UAGYZ_IG_TOKEN ролик с готовой подписью уходит владельцу в Telegram (бот TG_TOKEN), публикует он сам.
 `python uagyz/post.py yt` — следующий ролик на YouTube-канал Ummati (своя очередь в uagyz/yt_posted.json).
-Лимит YouTube API — 10 000 единиц в сутки, загрузка = 1600: Ummati грузит 3 ролика (9, 15, 21), уағыз — 3 (12, 18, 21)."""
+Лимит YouTube API — 10 000 единиц в сутки, загрузка = 1600: Ummati грузит 5 роликов, уағыз — 1 (18:00)."""
 import glob, json, os, sys, time, urllib.parse, urllib.request, urllib.error
 
 G = "https://graph.facebook.com/v21.0"
