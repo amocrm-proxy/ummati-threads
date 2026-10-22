@@ -121,6 +121,10 @@ if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # Shorts/Ti
         n = (datetime.date.fromisoformat(slot[:10]) - datetime.date(2026, 10, 15)).days * 5 + (9, 12, 15, 18, 21).index(hour)
         kind = ["ayah", "hadith", "support"][n % 3]                   # сура/аят → хадис → поддержка
         wd = datetime.date.fromisoformat(slot[:10]).weekday()
+        if hour == 9:                                                # YouTube: в 09 — сура/аят, в 15 — «хадис» (в kk — «Сильный аят»), в 21 — коврики
+            kind = "ayah"
+        if hour == 15:
+            kind = "hadith"
         if hour == 21:                                               # ролик с ковриками — каждый день в 21:00
             kind = "sale"
         if kind == "ayah":
@@ -136,7 +140,7 @@ if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # Shorts/Ti
                 print("Telegram:", e)
             if vref:
                 spec = f"voice:{vref}"
-        YOUTUBE = True                                # Алафаси убран (Content ID), чтецы: Хусари / Айюб / Абдуль-Басит
+        YOUTUBE = hour in (9, 15, 21)                 # лимит API ~6 загрузок в сутки: 3 Ummati (9, 15, 21) + 3 уағыз (12, 18, 21)
         inputs = {"spec": spec, "youtube": "true" if YOUTUBE or spec.startswith("voice") else "false", "reels": "true", "tiktok": "true", "threads": "true"}
         urllib.request.urlopen(urllib.request.Request(
             f"https://api.github.com/repos/{REPO}/actions/workflows/video.yml/dispatches", method="POST", headers=GH_HDR,
@@ -149,11 +153,11 @@ if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # Shorts/Ti
     except BaseException as e:
         print("YouTube Shorts: не удалось запустить:", e)
 ug_key = f"ug {slot[:13]}"
-if hour in (9, 12, 15, 18, 21) and not dry and ug_key not in used:   # уағыз: следующий ролик (Instagram или Telegram) — 5 раз в день; в 15:00 ещё один — на YouTube Ummati
+if hour in (9, 12, 15, 18, 21) and not dry and ug_key not in used:   # уағыз: следующий ролик (Instagram или Telegram) — 5 раз в день; в 12, 18 и 21 ещё и на YouTube Ummati
     try:
         urllib.request.urlopen(urllib.request.Request(
             f"https://api.github.com/repos/{REPO}/actions/workflows/uagyz.yml/dispatches", method="POST", headers=GH_HDR,
-            data=json.dumps({"ref": "main", "inputs": {"mode": "post_yt" if hour == 15 else "post"}}).encode()), timeout=30)
+            data=json.dumps({"ref": "main", "inputs": {"mode": "post_yt" if hour in (12, 18, 21) else "post"}}).encode()), timeout=30)
         used[ug_key] = "ug"
         put_file("used.json", json.dumps(used, ensure_ascii=False, indent=1).encode(), ug_key)
         print("Уағыз: публикация запущена")
