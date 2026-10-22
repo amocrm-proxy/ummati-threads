@@ -1,7 +1,9 @@
 """Уағыз: публикует следующий готовый ролик (uagyz/<тег>/clips/*.mp4) в Instagram страницы уағыз как Reels.
 Ключ — секрет UAGYZ_IG_TOKEN (бессрочный ключ страницы Facebook, к которой привязан этот Instagram).
 Очередь — по порядку тегов и номеров; опубликованные записываются в uagyz/posted.json.
-Без UAGYZ_IG_TOKEN ролик с готовой подписью уходит владельцу в Telegram (бот TG_TOKEN), публикует он сам."""
+Без UAGYZ_IG_TOKEN ролик с готовой подписью уходит владельцу в Telegram (бот TG_TOKEN), публикует он сам.
+`python uagyz/post.py yt` — следующий ролик на YouTube-канал Ummati (своя очередь в uagyz/yt_posted.json).
+Лимит YouTube API — 10 000 единиц в сутки, загрузка = 1600: Ummati грузит 5 роликов, уағыз — 1 в день."""
 import glob, json, os, sys, time, urllib.parse, urllib.request, urllib.error
 
 G = "https://graph.facebook.com/v21.0"
@@ -9,6 +11,7 @@ TOKEN = os.environ.get("UAGYZ_IG_TOKEN", "")
 REPO = os.environ["GITHUB_REPOSITORY"]
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.path.join(HERE, "posted.json")
+YT_STATE = os.path.join(HERE, "yt_posted.json")
 TAGS = "#уағыз #ислам #құран #намаз #иман #дін #қазақша"
 
 def call(method, path, **params):
@@ -41,9 +44,9 @@ def check():
     print("Страница:", page, "| Instagram:", acc.get("username"), "| подписчики:", acc.get("followers_count"))
     return uid
 
-def queue():
+def queue(state=STATE):
     """Следующий ролик: видео чередуются по кругу (после ролика из одного видео — следующее видео, где ещё есть ролики)."""
-    posted = json.load(open(STATE)) if os.path.exists(STATE) else []
+    posted = json.load(open(state)) if os.path.exists(state) else []
     tags = sorted(glob.glob(os.path.join(HERE, "uagyz-*")), key=lambda p: int(p.rsplit("-", 1)[-1]) if p.rsplit("-", 1)[-1].isdigit() else 0)
     ready = []                                    # [(папка, cfg, первый неопубликованный ролик, путь)]
     for tag_dir in tags:
@@ -82,6 +85,21 @@ def telegram(path, caption):
     with urllib.request.urlopen(req, timeout=300) as r:
         return json.load(r)["ok"]
 
+def youtube():
+    """Следующий ролик уағыз — Shorts на канал Ummati (ключи YT_* те же, что у роликов Ummati)."""
+    sys.path.insert(0, os.path.join(HERE, ".."))
+    import yt
+    rel, cfg, c, posted = queue(YT_STATE)
+    if not rel:
+        print("YouTube: очередь пуста"); return
+    who = cfg.get("ustaz") or ""
+    title = " | ".join(x for x in (c.get("topic"), who) if x) or "Уағыз"
+    desc = "\n".join(x for x in (c.get("topic"), who or cfg.get("caption") or "Ұстаздардың уағызы") if x) + "\n\n" + TAGS + " #shorts\n\nЖайнамаздар: instagram.com/ummati.family"
+    tags = ["уағыз", "ислам", "құран", "намаз", "иман", "қазақша", "ummati", "shorts"] + ([who] if who else [])
+    yt.upload(os.path.join(HERE, "..", rel), title + " #shorts", desc, "public", tags, lang="kk", audio="kk")
+    posted.append(rel)
+    json.dump(posted, open(YT_STATE, "w"), indent=1)
+
 def main():
     if not TOKEN:                                 # Instagram ещё не подключён — отправляем ролик в Telegram
         rel, cfg, c, posted = queue()
@@ -115,4 +133,4 @@ def main():
     json.dump(posted, open(STATE, "w"), indent=1)
 
 if __name__ == "__main__":
-    main()
+    youtube() if sys.argv[1:] == ["yt"] else main()
