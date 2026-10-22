@@ -29,12 +29,17 @@ def crop(im, w, h):
     return im.crop((l, t, l + w, t + h))
 
 def carousel(day, n):
-    c = CAT["carousels"][n % len(CAT["carousels"])]
+    c = CAT["friday"]["carousel"] if day.weekday() == 4 else CAT["carousels"][n % len(CAT["carousels"])]
     ims = [crop(upright(p), 1080, 1350) for p in c["photos"]]
     caption = "\n".join([c["text"], "", "📏 110×70 см · жұмсақ барқыт · Anti Slip", KIT, price(day),
                          "🚚 Қазақстан бойынша — пошта немесе InDrive. Алматы ішінде 20:00-ден кейін — тегін",
                          "🤲 Әр сатып алудың 5%-ы қайырымдылыққа", "", "Тапсырыс: директке жазыңыз", "", TAGS])
     return ims, caption
+
+def friday_story(h, R):
+    """Пятница: сторис про жұма (только сунна из Бұхари и Муслима, без цитат) — 08, 12, 17."""
+    s = CAT["friday"]["stories"].get(str(h))
+    return R.text_slide("emer", s["kicker"], title=s["title"], body=s["body"], story=True) if s else None
 
 def story(day, n, R, footer):
     st = CAT["stories"]
