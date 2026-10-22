@@ -165,7 +165,18 @@ if hour in (9, 12, 15, 18, 21) and not dry and ug_key not in used:   # уағы�
         print("Уағыз: публикация запущена")
     except BaseException as e:
         print("Уағыз: не удалось запустить:", e)
-if slot in [v for k, v in used.items() if not k.startswith(("ig", "yt", "ug"))] and not dry:
+ut_key = f"ut {slot[:13]}"
+if hour == 20 and not dry and ut_key not in used:                    # уағыз: 1 ролик в день в TikTok (отдельно от слотов видео)
+    try:
+        urllib.request.urlopen(urllib.request.Request(
+            f"https://api.github.com/repos/{REPO}/actions/workflows/uagyz.yml/dispatches", method="POST", headers=GH_HDR,
+            data=json.dumps({"ref": "main", "inputs": {"mode": "tt"}}).encode()), timeout=30)
+        used[ut_key] = "ut"
+        put_file("used.json", json.dumps(used, ensure_ascii=False, indent=1).encode(), ut_key)
+        print("Уағыз: TikTok запущен")
+    except BaseException as e:
+        print("Уағыз: TikTok не удалось запустить:", e)
+if slot in [v for k, v in used.items() if not k.startswith(("ig", "yt", "ug", "ut"))] and not dry:
     print(f"{slot} уже опубликован"); sys.exit(0)
 
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pillow"], check=True)
