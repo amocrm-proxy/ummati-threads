@@ -25,22 +25,33 @@ def call(method, path, **params):
     except urllib.error.HTTPError as e:
         raise RuntimeError(f"{method} {path}: {e.code} {e.read().decode()[:400]}")
 
+def _exp(tok):
+    exp = call("GET", "debug_token", input_token=tok).get("data", {}).get("expires_at", 0)
+    return "никогда" if not exp else time.strftime("%d/%m/%Y", time.gmtime(exp))
+
 def ig_user():
-    me = call("GET", "me", fields="id,name,instagram_business_account")
-    if me.get("instagram_business_account"):
-        return me["instagram_business_account"]["id"], me.get("name")
-    for p in call("GET", "me/accounts", fields="id,name,instagram_business_account").get("data", []):
-        if p.get("instagram_business_account"):
-            print("ВНИМАНИЕ: в UAGYZ_IG_TOKEN ключ пользователя, а не страницы — он истечёт.")
-            return p["instagram_business_account"]["id"], p["name"]
-    sys.exit("К ключу не привязан ни один Instagram (проверь связку страницы и Instagram)")
+    """Ключ страницы — берём Instagram страницы. Ключ пользователя — сами находим страницу уағыз
+    (Instagram с «uagyz» в имени) и дальше работаем её ключом. Сами ключи никогда не печатаем."""
+    global TOKEN
+    kind = call("GET", "debug_token", input_token=TOKEN).get("data", {}).get("type")
+    if kind != "USER":
+        me = call("GET", "me", fields="id,name,instagram_business_account")
+        if me.get("instagram_business_account"):
+            return me["instagram_business_account"]["id"], me.get("name")
+        sys.exit("К ключу страницы не привязан Instagram")
+    pages = call("GET", "me/accounts", fields="name,access_token,instagram_business_account{id,username}").get("data", [])
+    pages = [p for p in pages if p.get("instagram_business_account")]
+    pick = next((p for p in pages if "uagyz" in p["instagram_business_account"].get("username", "")), None)
+    if not pick:
+        sys.exit("Среди страниц ключа нет Instagram уағыз: " + ", ".join(p["name"] for p in pages))
+    print("В UAGYZ_IG_TOKEN ключ пользователя (истекает:", _exp(TOKEN) + ") — ключ страницы", pick["name"], "получен из него")
+    TOKEN = pick["access_token"]
+    return pick["instagram_business_account"]["id"], pick["name"]
 
 def check():
-    info = call("GET", "debug_token", input_token=TOKEN).get("data", {})
-    exp = info.get("expires_at", 0)
     uid, page = ig_user()
     acc = call("GET", uid, fields="username,followers_count")
-    print("Ключ:", info.get("type"), "| истекает:", "никогда" if not exp else time.strftime("%d/%m/%Y", time.gmtime(exp)))
+    print("Ключ страницы истекает:", _exp(TOKEN))
     print("Страница:", page, "| Instagram:", acc.get("username"), "| подписчики:", acc.get("followers_count"))
     return uid
 
