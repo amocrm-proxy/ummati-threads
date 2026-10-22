@@ -16,6 +16,7 @@ TOKEN = os.environ.get("IG_TOKEN", "")
 REPO = os.environ["GITHUB_REPOSITORY"]
 GH_HDR = {"Authorization": f"Bearer {os.environ.get('GITHUB_TOKEN', '')}", "Accept": "application/vnd.github+json"}
 START = datetime.date(2026, 10, 16)
+SHOP = True                                      # Ummati Family — только продажи (аяты/сунна/әдеп — в Instagram уағыз)
 
 def call(method, path, **params):
     q = urllib.parse.urlencode(params)
@@ -148,6 +149,14 @@ def auto_item(slot, used):
     off = C["offer"]
     def offer(page=None):
         return R.text_slide("choc", off["kicker"], title=off["title"], body=off["body"], page=page, footer=DM)
+    if SHOP and h in (8, 14, 17, 19):            # Ummati Family — магазин: сторис 08/14/17, карусель 19 (shop/)
+        sys.path.insert(0, "shop")
+        import shop
+        day = datetime.date.fromisoformat(slot[:10])
+        if h == 19:
+            ims, cap = shop.carousel(day, d)
+            return "carousel", ims, cap
+        return "stories", [shop.story(day, d * 3 + (8, 14, 17).index(h), R, DM)], ""
     if h == 8:                                   # аяты Корана по порядку (перевод Кулиева, длинный аят — несколько сторис)
         import content
         n = int(used.get("igq_next", 1))

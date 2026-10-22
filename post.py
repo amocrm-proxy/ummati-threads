@@ -143,7 +143,7 @@ if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # Shorts/Ti
             if vref:
                 spec = f"voice:{vref}"
         YOUTUBE = True                                # лимит API ~6 загрузок в сутки: 5 Ummati (все слоты) + 1 уағыз (18:00)
-        inputs = {"spec": spec, "youtube": "true" if YOUTUBE or spec.startswith("voice") else "false", "reels": "true", "tiktok": "true", "threads": "true"}
+        inputs = {"spec": spec, "youtube": "true" if YOUTUBE or spec.startswith("voice") else "false", "reels": "true" if hour == 21 else "false", "tiktok": "true", "threads": "true"}
         urllib.request.urlopen(urllib.request.Request(
             f"https://api.github.com/repos/{REPO}/actions/workflows/video.yml/dispatches", method="POST", headers=GH_HDR,
             data=json.dumps({"ref": "main", "inputs": inputs}).encode()), timeout=30)
