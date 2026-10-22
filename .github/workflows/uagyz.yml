@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "cut — нарезать по clips.json, post — опубликовать следующий, yt — следующий на YouTube, post_yt — оба, check — проверить ключ"
+        description: "cut — нарезать по clips.json, post — опубликовать следующий, yt — следующий на YouTube, tt — в TikTok, post_yt — оба, check — проверить ключ"
         default: "post"
       tag:
         description: "Тег релиза для нарезки, например uagyz-1"
@@ -24,6 +24,10 @@ jobs:
       YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
       YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
       YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+      TT_CLIENT_KEY: ${{ secrets.TT_CLIENT_KEY }}
+      TT_CLIENT_SECRET: ${{ secrets.TT_CLIENT_SECRET }}
+      TT_AUDITED: ${{ vars.TT_AUDITED }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -42,6 +46,8 @@ jobs:
         run: python uagyz/post.py
       - if: ${{ !cancelled() && (env.MODE == 'post_yt' || env.MODE == 'yt') }}
         run: python uagyz/post.py yt
+      - if: env.MODE == 'tt'
+        run: python uagyz/post.py tt
       - if: env.MODE == 'check'
         run: CHECK_ONLY=1 python uagyz/post.py
       - if: ${{ !cancelled() && env.MODE != 'check' }}
