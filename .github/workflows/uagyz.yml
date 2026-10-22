@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "cut — нарезать по clips.json, post — опубликовать следующий, check — проверить ключ"
+        description: "cut — нарезать по clips.json, post — опубликовать следующий, yt — следующий на YouTube, post_yt — оба, check — проверить ключ"
         default: "post"
       tag:
         description: "Тег релиза для нарезки, например uagyz-1"
@@ -21,6 +21,9 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       UAGYZ_IG_TOKEN: ${{ secrets.UAGYZ_IG_TOKEN }}
       TG_TOKEN: ${{ secrets.TG_TOKEN }}
+      YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+      YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+      YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -35,11 +38,13 @@ jobs:
           f=$(ls -S _in/* | head -1)
           python uagyz/cut.py "$f" "uagyz/$TAG/clips.json" "uagyz/$TAG/clips"
           rm -f "uagyz/$TAG/clips/overlay.png"
-      - if: env.MODE == 'post'
+      - if: startsWith(env.MODE, 'post')
         run: python uagyz/post.py
+      - if: ${{ !cancelled() && (env.MODE == 'post_yt' || env.MODE == 'yt') }}
+        run: python uagyz/post.py yt
       - if: env.MODE == 'check'
         run: CHECK_ONLY=1 python uagyz/post.py
-      - if: env.MODE != 'check'
+      - if: ${{ !cancelled() && env.MODE != 'check' }}
         run: |
           git config user.name "ummati-bot"
           git config user.email "bot@users.noreply.github.com"
