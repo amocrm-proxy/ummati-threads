@@ -6,13 +6,13 @@ from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
 CAT = json.load(open(os.path.join(HERE, "catalog.json"), encoding="utf-8"))
 PROMO_END = datetime.date(2026, 10, 31)
-KIT = "🎁 Жиынтықта: жайнамаз, Зәмзәм суы, агат тасбих, сыйлық қаптамасы (zip-пакет + картон сөмке)"
-TAGS = "#жайнамаз #намазныековрики #ummati #сыйлық #алматы #қазақстан"
+KIT = "Жиынтықта: жайнамаз, Зәмзәм суы, агат тасбих және әдемі сыйлық қаптамасы."
+TAGS = "#жайнамаз #намазныековрики #ummati #сыйлық #алматы"
 
 def price(day):
     if day <= PROMO_END:
-        return f"🔥 {PROMO_END.day} қазанға дейін: 1+1 — 2 жиынтық 9 900 ₸"
-    return "💳 Жиынтық бағасы: 9 900 ₸"
+        return f"{PROMO_END.day} қазанға дейін 1+1 акциясы: 2 жиынтық — 9 900 ₸."
+    return "Бағасы — 9 900 ₸."
 
 def upright(name):
     """Фото ровно: поворот из catalog.json, сохраняем во временный файл (для photo_slide)."""
@@ -31,9 +31,10 @@ def crop(im, w, h):
 def carousel(day, n):
     c = CAT["friday"]["carousel"] if day.weekday() == 4 else CAT["carousels"][n % len(CAT["carousels"])]
     ims = [crop(upright(p), 1080, 1350) for p in c["photos"]]
-    caption = "\n".join([c["text"], "", "📏 110×70 см · жұмсақ барқыт · Anti Slip", KIT, price(day),
-                         "🚚 Қазақстан бойынша — пошта немесе InDrive. Алматы ішінде 20:00-ден кейін — тегін",
-                         "🤲 Әр сатып алудың 5%-ы қайырымдылыққа", "", "Тапсырыс: директке жазыңыз", "", TAGS])
+    caption = "\n".join([c["text"], "", "Өлшемі 110×70 см, жұмсақ барқыттан, асты тайғанамайды.", KIT, "",
+                         price(day), "",
+                         "Қазақстан бойынша поштамен немесе InDrive арқылы жібереміз. Алматыда кешкі 20:00-ден кейін жеткізу тегін.",
+                         "Әр тапсырыстың 5%-ын қайырымдылыққа береміз.", "", "Тапсырыс беру үшін директке жазыңыз 🤍", "", TAGS])
     return ims, caption
 
 def friday_story(h, R):
@@ -47,7 +48,7 @@ def story(day, n, R, footer):
     title, sub = s["title"], s["sub"]
     if title == "PROMO":
         title, sub = (("1+1 — 9 900 ₸", f"{PROMO_END.day} қазанға дейін: 2 жиынтық") if day <= PROMO_END
-                      else ("Жиынтық — 9 900 ₸", "Жайнамаз, Зәмзәм суы, агат тасбих"))
+                      else ("Жиынтық — 9 900 ₸", "Жайнамаз, Зәмзәм суы және агат тасбих"))
     tmp = f"/tmp/shop_story_{n}.jpg"
     upright(s["photo"]).save(tmp, quality=95)
     return R.photo_slide(tmp, title, sub, story=True, footer=footer, kicker="ummati")
