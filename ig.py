@@ -149,10 +149,14 @@ def auto_item(slot, used):
     off = C["offer"]
     def offer(page=None):
         return R.text_slide("choc", off["kicker"], title=off["title"], body=off["body"], page=page, footer=DM)
-    if SHOP and h in (8, 14, 17, 19):            # Ummati Family — магазин: сторис 08/14/17, карусель 19 (shop/)
+    if SHOP and h in (8, 12, 14, 17, 19):        # Ummati Family — магазин: сторис 08/14/17, карусель 19 (shop/); пятница — жұма
         sys.path.insert(0, "shop")
         import shop
         day = datetime.date.fromisoformat(slot[:10])
+        if day.weekday() == 4 and h in (8, 12, 17):
+            return "stories", [shop.friday_story(h, R)], ""
+        if h == 12:
+            return None
         if h == 19:
             ims, cap = shop.carousel(day, d)
             return "carousel", ims, cap
