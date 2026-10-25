@@ -23,8 +23,15 @@ def main(path):
     name = "igauto/reel_" + os.path.basename(path)
     ig.put_file(name, open(path, "rb").read(), f"reel {name}")
     time.sleep(10)
-    tok = ig.page_token()
-    caption = tags_only(m)
+    user, tok, caption = ig.IG_USER, None, tags_only(m)
+    if os.environ.get("REEL_TARGET") == "uagyz":           # в Instagram уағыз (ключ UAGYZ_IG_TOKEN)
+        import importlib.util
+        sp = importlib.util.spec_from_file_location("uagyz_post", os.path.join(os.path.dirname(os.path.abspath(__file__)), "uagyz", "post.py"))
+        U = importlib.util.module_from_spec(sp); sp.loader.exec_module(U)
+        user, _ = U.ig_user(); tok = U.TOKEN
+        caption += "\n\nЖайнамаздар: @ummati.family"
+    else:
+        tok = ig.page_token()
     extra = {}
     cov = path.rsplit(".", 1)[0] + "_cover.jpg"
     if os.path.exists(cov):                       # своя обложка Reels (для сетки профиля)
@@ -32,12 +39,12 @@ def main(path):
         ig.put_file(cname, open(cov, "rb").read(), f"cover {cname}")
         time.sleep(5); extra["cover_url"] = ig.url(cname)
     try:
-        cid = ig.call("POST", f"{ig.IG_USER}/media", media_type="REELS", video_url=ig.url(name),
+        cid = ig.call("POST", f"{user}/media", media_type="REELS", video_url=ig.url(name),
                       caption=caption, share_to_feed="true", access_token=tok, **extra)["id"]
     except RuntimeError as e:
         if not extra: raise
         print("обложка не принята, публикую без неё:", e)
-        cid = ig.call("POST", f"{ig.IG_USER}/media", media_type="REELS", video_url=ig.url(name),
+        cid = ig.call("POST", f"{user}/media", media_type="REELS", video_url=ig.url(name),
                       caption=caption, share_to_feed="true", access_token=tok)["id"]
     for _ in range(60):                           # видео обрабатывается дольше картинки — ждём до 5 минут
         st = ig.call("GET", cid, fields="status_code", access_token=tok).get("status_code")
@@ -48,7 +55,7 @@ def main(path):
         time.sleep(5)
     else:
         sys.exit("Reels: видео не обработалось за 5 минут")
-    print("Reels опубликован:", ig.call("POST", f"{ig.IG_USER}/media_publish", creation_id=cid, access_token=tok))
+    print("Reels опубликован:", ig.call("POST", f"{user}/media_publish", creation_id=cid, access_token=tok))
 
 if __name__ == "__main__":
     main(sys.argv[1])

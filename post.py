@@ -127,8 +127,10 @@ if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # Shorts/Ti
         wd = datetime.date.fromisoformat(slot[:10]).weekday()
         if hour == 9:                                                # YouTube: в 09 — сура/аят, в 15 — «хадис» (в kk — «Сильный аят»), в 21 — коврики
             kind = "ayah"
+        if hour == 12:                                               # 12 — «Сүннет», 15 — «Әдеп» (sunnet_kk.json)
+            kind = "sunna"
         if hour == 15:
-            kind = "hadith"
+            kind = "adab"
         if hour == 18:                                               # 18 — «Жүрекке демеу» (поддержка)
             kind = "support"
         if hour == 21:                                               # ролик с ковриками — каждый день в 21:00

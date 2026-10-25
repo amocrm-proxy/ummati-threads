@@ -324,6 +324,9 @@ if __name__ == "__main__":
     photo = sys.argv[2] if len(sys.argv) > 2 else "green_tex.jpg"
     out = sys.argv[3] if len(sys.argv) > 3 else "short.mp4"
     voice = None
+    if spec.split(":")[0] in ("sunna", "adab"):         # «Сүннет» / «Әдеп» — карточка с действиями из сунны (sunnet_kk.json)
+        import sunnet_video
+        print("Готово:", out, f"{sunnet_video.build(spec.split(':')[0], out):.1f} c"); sys.exit(0)
     if kk.ON and spec.startswith("hadith"):            # казахский режим: хадисов нет — вместо них «Сильный аят»
         spec = "card" + spec[6:]
     if spec.split(":")[0] in ("auto", "card", "hadith", "support", "sale"):   # моушн-версии (motion/), при сбое — старые шаблоны
