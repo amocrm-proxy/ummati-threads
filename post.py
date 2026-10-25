@@ -12,7 +12,8 @@ from zoneinfo import ZoneInfo
 import kk                                          # kk.ON — казахский режим (аяты Алтая, хадисов нет)
 
 API = "https://graph.threads.net/v1.0"
-TOKEN = os.environ["THREADS_TOKEN"]
+import th_token                                     # ключ Threads с автопродлением (раз в неделю)
+TOKEN = th_token.get()
 REPO = os.environ["GITHUB_REPOSITORY"]
 GH_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GH_HDR = {"Authorization": f"Bearer {GH_TOKEN}", "Accept": "application/vnd.github+json"}
@@ -171,6 +172,14 @@ if hour in (9, 12, 15, 18, 21) and not dry and ug_key not in used:   # уағы�
         print("Уағыз: публикация запущена")
     except BaseException as e:
         print("Уағыз: не удалось запустить:", e)
+th_key = "th_refresh " + datetime.date.fromisoformat(slot[:10]).strftime("%G-W%V")
+if not dry and th_key not in used:                                   # раз в неделю продлеваем ключ Threads (живёт 60 дней)
+    try:
+        TOKEN = th_token.refresh(put_file)
+        used[th_key] = slot
+        put_file("used.json", json.dumps(used, ensure_ascii=False, indent=1).encode(), th_key)
+    except BaseException as e:
+        print("Threads ключ: продлить не удалось:", e)
 ut_key = f"ut {slot[:13]}"
 if hour == 20 and not dry and ut_key not in used:                    # уағыз: 1 ролик в день в TikTok (отдельно от слотов видео)
     try:
@@ -182,7 +191,7 @@ if hour == 20 and not dry and ut_key not in used:                    # уағы�
         print("Уағыз: TikTok запущен")
     except BaseException as e:
         print("Уағыз: TikTok не удалось запустить:", e)
-if slot in [v for k, v in used.items() if not k.startswith(("ig", "yt", "ug", "ut"))] and not dry:
+if slot in [v for k, v in used.items() if not k.startswith(("ig", "yt", "ug", "ut", "th_"))] and not dry:
     print(f"{slot} уже опубликован"); sys.exit(0)
 
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pillow"], check=True)

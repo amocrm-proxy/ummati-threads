@@ -18,7 +18,8 @@ def tags_only(m):
     return " ".join(out)
 
 API = "https://graph.threads.net/v1.0"
-TOKEN = os.environ["THREADS_TOKEN"]
+import th_token                                     # ключ Threads с автопродлением
+TOKEN = th_token.get()
 REPO = os.environ["GITHUB_REPOSITORY"]
 GH_HDR = {"Authorization": f"Bearer {os.environ.get('GITHUB_TOKEN', '')}", "Accept": "application/vnd.github+json"}
 
