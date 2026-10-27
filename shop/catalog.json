@@ -70,6 +70,51 @@
     "l1033082"
    ],
    "text": "Намаз оқитын өз орныңыз болсын."
+  },
+  {
+   "photos": [
+    "fl_komplekt_derevo",
+    "fl_emerald_emboss_derevo",
+    "fl_brown_arch_derevo",
+    "fl_grey_arch_derevo"
+   ],
+   "text": "Үйге жылулық беретін жайнамаз."
+  },
+  {
+   "photos": [
+    "fl_komplekt_kiiz",
+    "fl_brown_arch_kiiz",
+    "fl_green_arch_kiiz",
+    "fl_light_rect_kiiz"
+   ],
+   "text": "Қазақы үйге лайық жайнамаз."
+  },
+  {
+   "photos": [
+    "fl_brown_arch_listya",
+    "fl_emerald_emboss_listya",
+    "fl_black_arch_listya",
+    "fl_grey_arch_listya"
+   ],
+   "text": "Күз келді. Намазға жұмсақ әрі жылы жайнамаз."
+  },
+  {
+   "photos": [
+    "fl_black_arch_derevo",
+    "fl_black_rect_kiiz",
+    "fl_black_rect_derevo",
+    "fl_black_arch_kiiz"
+   ],
+   "text": "Қара түс — әрқашан ұстамды әрі әдемі."
+  },
+  {
+   "photos": [
+    "fl_green_arch_derevo",
+    "fl_emerald_emboss_kiiz",
+    "fl_green_arch_listya",
+    "fl_komplekt_derevo"
+   ],
+   "text": "Жасыл жайнамаз — көзге жайлы түс."
   }
  ],
  "stories": [
@@ -107,6 +152,26 @@
    "photo": "l1033253",
    "title": "Үйіңізге жарасады",
    "sub": "Жұмсақ барқыт, алтын шашақ"
+  },
+  {
+   "photo": "fl_komplekt_derevo",
+   "title": "Сыйлыққа дайын",
+   "sub": "Жайнамаз, Зәмзәм суы, агат тасбих"
+  },
+  {
+   "photo": "fl_emerald_emboss_kiiz",
+   "title": "Бедерлі өрнек",
+   "sub": "110×70 см, жұмсақ барқыт"
+  },
+  {
+   "photo": "fl_brown_arch_listya",
+   "title": "Күзгі жылулық",
+   "sub": "Асты тайғанамайды"
+  },
+  {
+   "photo": "fl_light_rect_derevo",
+   "title": "Ақшыл түс",
+   "sub": "Жұмсақ барқыт, 110×70 см"
   }
  ],
  "friday": {
