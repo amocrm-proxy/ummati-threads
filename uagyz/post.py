@@ -145,6 +145,7 @@ def main():
         print("Очередь пуста — новых роликов нет"); return
     url = f"https://raw.githubusercontent.com/{REPO}/main/{urllib.parse.quote(rel)}"
     caption = (c.get("caption") or "\n".join(x for x in (c.get("topic"), cfg.get("caption") or cfg.get("ustaz") or "Ұстаздардың уағызы") if x)) + "\n\n" + TAGS + "\n\nЖайнамаздар: @ummati.family"
+    caption += "\n\nWhatsApp арнамыз: https://whatsapp.com/channel/0029Vb9Npdf1CYoVbO88ZX3Q"
     cid = call("POST", f"{uid}/media", media_type="REELS", video_url=url, caption=caption, share_to_feed="true")["id"]
     for _ in range(60):
         st = call("GET", cid, fields="status_code").get("status_code")
