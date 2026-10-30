@@ -15,7 +15,7 @@ import shop
 HOURS = (9, 14, 20)
 ORDER = ["ayah", "sunna", "adab", "dua", "support", "sale"]
 PHONE = "77078342525"
-FOOT = f"—\nUmmati жайнамаздары: wa.me/{PHONE}"
+FOOT = f"—\nЖайнамаздарды көру: instagram.com/ummati.family\nТапсырыс: wa.me/{PHONE}"
 LINKS = ("Instagram: instagram.com/ummati.family\nThreads: threads.net/@ummati.family\n"
          "TikTok: tiktok.com/@ummati.family")
 
