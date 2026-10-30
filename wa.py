@@ -47,7 +47,7 @@ def dua(k):
     d = D[k % len(D)]
     s, a, t = _ayah_text(d["ref"])
     where = f"«{kk.NAMES[s - 1]}» сүресі, {d['ref'].split(':')[1]}-аят"
-    im = R.text_slide("choc", "ҚҰРАНДАҒЫ ДҰҒА", title=d["tr"], source=f"Құран, {d['ref']}", body="Сақтап, жаттап алыңыз")
+    im = R.text_slide("choc", "ҚҰРАНДАҒЫ ДҰҒА", title=d["tr"], source=f"Құран, {d['ref']}", body=f"Мағынасы: {t}")
     cap = (f"🤲 Құрандағы дұға\n\n{d['tr']}\n\nАяттың мағынасы: «{t}»\n({where}. {kk.SOURCE})\n\n"
            f"Сақтап, жақындарыңызға жіберіңіз.\n\n{FOOT}")
     return im, cap, 1
