@@ -191,7 +191,20 @@ if hour == 20 and not dry and ut_key not in used:                    # уағы�
         print("Уағыз: TikTok запущен")
     except BaseException as e:
         print("Уағыз: TikTok не удалось запустить:", e)
-if slot in [v for k, v in used.items() if not k.startswith(("ig", "yt", "ug", "ut", "th_"))] and not dry:
+wa_key = f"wa {slot[:13]}"
+if hour in (9, 14, 20) and not dry and wa_key not in used:           # WhatsApp-канал: готовый пост в Telegram Арсену (он пересылает вручную)
+    try:
+        try:
+            import PIL
+        except ImportError:
+            subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pillow"], check=True)
+        import wa
+        wa.run(put_file, datetime.datetime.now(ZoneInfo("Asia/Almaty")))
+        used[wa_key] = "wa"
+        put_file("used.json", json.dumps(used, ensure_ascii=False, indent=1).encode(), wa_key)
+    except BaseException as e:
+        print("WhatsApp-канал: не удалось:", e)
+if slot in [v for k, v in used.items() if not k.startswith(("ig", "yt", "ug", "ut", "th_", "wa"))] and not dry:
     print(f"{slot} уже опубликован"); sys.exit(0)
 
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pillow"], check=True)
