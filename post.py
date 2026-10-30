@@ -192,7 +192,7 @@ if hour == 20 and not dry and ut_key not in used:                    # уағы�
     except BaseException as e:
         print("Уағыз: TikTok не удалось запустить:", e)
 wa_key = f"wa {slot[:13]}"
-if hour in (9, 14, 20) and not dry and wa_key not in used:           # WhatsApp-канал: готовый пост в Telegram Арсену (он пересылает вручную)
+if hour in (9, 12, 15, 20) and not dry and wa_key not in used:           # WhatsApp-канал: готовый пост в Telegram Арсену (он пересылает вручную)
     try:
         try:
             import PIL

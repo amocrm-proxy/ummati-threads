@@ -3,7 +3,7 @@
 Порядок по кругу: аят → сүннет → әдеп → дұға → жүрекке демеу → жайнамаз (продажа).
 Всё на казахском. Аяты и дұға — дословно перевод Халифы Алтая (kk.py), сүннет/әдеп — sunnet_kk.json,
 дұға — только из Құрана (duas_kk.json, транскрипцию проверяет Арсен). Состояние — wa_state.json.
-Вызывается из post.py в 09, 14 и 20 часов (Алматы)."""
+Вызывается из post.py в 09, 12, 15, 20 (Алматы): 09 и 15 — картинка, 12 и 20 — ролик устаза (uagyz/*/clips)."""
 import datetime, io, json, os, sys, urllib.request, uuid
 import kk, support
 import ig_render as R
@@ -12,7 +12,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.path.join(HERE, "wa_state.json")
 sys.path.insert(0, os.path.join(HERE, "shop"))
 import shop
-HOURS = (9, 14, 20)
+HOURS = (9, 12, 15, 20)                          # тест: 9 и 15 — картинка, 12 и 20 — видео устаза
+VIDEO_HOURS = (12, 20)
 ORDER = ["ayah", "sunna", "adab", "dua", "support", "sale"]
 PHONE = "77078342525"
 FOOT = f"—\nЖайнамаздарды көру: instagram.com/ummati.family\nТапсырыс: wa.me/{PHONE}"
@@ -96,17 +97,62 @@ def _send_text(token, chat, text):
     urllib.request.urlopen(urllib.request.Request(f"https://api.telegram.org/bot{token}/sendMessage", data=data,
                                                   headers={"Content-Type": "application/json"}), timeout=60).read()
 
+def clips():
+    """Все готовые ролики устазов: новые видео первыми (uagyz-5, uagyz-4, ...)."""
+    import glob
+    out = []
+    tags = sorted(glob.glob(os.path.join(HERE, "uagyz", "uagyz-*")), key=lambda p: -int(p.rsplit("-", 1)[-1]) if p.rsplit("-", 1)[-1].isdigit() else 0)
+    for d in tags:
+        cp = os.path.join(d, "clips.json")
+        if not os.path.exists(cp):
+            continue
+        cfg = json.load(open(cp, encoding="utf-8"))
+        for c in cfg["clips"]:
+            f = os.path.join(d, "clips", f"{c['id']}.mp4")
+            if os.path.exists(f):
+                out.append((f, c.get("topic", ""), cfg.get("ustaz", "")))
+    return out
+
+def video(st):
+    C = clips()
+    k = st.get("vid", 0)
+    f, topic, ustaz = C[k % len(C)]
+    st["vid"] = k + 1
+    who = f"Ұстаз {ustaz}" if ustaz else "Уағыз"
+    return f, f"🎙 {topic}\n\n{who}\n\nСақтап, жақындарыңызға жіберіңіз.\n\n{FOOT}"
+
+def _send_file(token, method, field, chat, data, name, ctype, caption):
+    b = uuid.uuid4().hex
+    body = (f"--{b}\r\nContent-Disposition: form-data; name=\"chat_id\"\r\n\r\n{chat}\r\n"
+            f"--{b}\r\nContent-Disposition: form-data; name=\"caption\"\r\n\r\n{caption}\r\n"
+            f"--{b}\r\nContent-Disposition: form-data; name=\"{field}\"; filename=\"{name}\"\r\nContent-Type: {ctype}\r\n\r\n"
+            ).encode() + data + f"\r\n--{b}--\r\n".encode()
+    req = urllib.request.Request(f"https://api.telegram.org/bot{token}/{method}", data=body,
+                                 headers={"Content-Type": f"multipart/form-data; boundary={b}"})
+    urllib.request.urlopen(req, timeout=120).read()
+
 def run(put_file, now, dry=False):
     st = json.load(open(STATE)) if os.path.exists(STATE) else {"sale": 6}   # продажи начинаем с новых фото (флэтлеи)
-    kind, im, cap = build(st, now.date())
-    buf = io.BytesIO(); im.save(buf, "JPEG", quality=92)
-    if dry:
-        return kind, buf.getvalue(), cap
-    token = os.environ["TG_TOKEN"].strip()
-    owner = json.load(open(os.path.join(HERE, "tg_state.json"), encoding="utf-8"))["owner"]
-    n = st["i"]
-    _send_photo(token, owner, buf.getvalue(), f"WhatsApp-канал · {n} · {now:%d.%m %H:%M} — картинка (переслать в канал)")
-    _send_text(token, owner, cap)
+    if now.hour in VIDEO_HOURS:
+        f, cap = video(st)
+        if dry:
+            return "video", f, cap
+        token = os.environ["TG_TOKEN"].strip()
+        owner = json.load(open(os.path.join(HERE, "tg_state.json"), encoding="utf-8"))["owner"]
+        _send_file(token, "sendVideo", "video", owner, open(f, "rb").read(), "uagyz.mp4", "video/mp4",
+                   f"WhatsApp-канал · видео · {now:%d.%m %H:%M} — переслать в канал")
+        _send_text(token, owner, cap)
+        kind = "video"
+    else:
+        kind, im, cap = build(st, now.date())
+        buf = io.BytesIO(); im.save(buf, "JPEG", quality=92)
+        if dry:
+            return kind, buf.getvalue(), cap
+        token = os.environ["TG_TOKEN"].strip()
+        owner = json.load(open(os.path.join(HERE, "tg_state.json"), encoding="utf-8"))["owner"]
+        _send_file(token, "sendPhoto", "photo", owner, buf.getvalue(), "wa.jpg", "image/jpeg",
+                   f"WhatsApp-канал · {kind} · {now:%d.%m %H:%M} — картинка (переслать в канал)")
+        _send_text(token, owner, cap)
     raw = json.dumps(st, ensure_ascii=False, indent=1).encode()
     open(STATE, "wb").write(raw)
     put_file("wa_state.json", raw, f"wa {now:%Y-%m-%dT%H}")
