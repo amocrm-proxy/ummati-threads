@@ -54,7 +54,7 @@ def main(path):
     put_file(name, open(path, "rb").read())
     time.sleep(10)
     video_url = f"https://raw.githubusercontent.com/{REPO}/main/{urllib.parse.quote(name)}"
-    text = tags_only(m) + "\n\nWhatsApp арнамыз: https://whatsapp.com/channel/0029Vb9Npdf1CYoVbO88ZX3Q"
+    text = tags_only(m) + "\n\nWhatsApp арнамыздың сілтемесі профильде"
     uid = threads("GET", "me", fields="id")["id"]
     cid = threads("POST", f"{uid}/threads", media_type="VIDEO", video_url=video_url, text=text[:490])["id"]
     for _ in range(60):                           # видео обрабатывается — ждём до 5 минут
