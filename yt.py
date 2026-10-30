@@ -31,6 +31,7 @@ def token():
 
 def upload(path, title, desc, privacy="public", tags=None, lang="ru", audio="ar"):
     tok = token()
+    desc = desc.rstrip() + "\n\nWhatsApp арнамызға жазылыңыз: https://whatsapp.com/channel/0029Vb9Npdf1CYoVbO88ZX3Q"   # ссылка на WhatsApp-канал во всех видео YouTube
     meta = {"snippet": {"title": title[:100], "description": desc[:4900], "categoryId": "22",
                         "tags": tags or ["ummati", "құран", "намаз", "ислам", "жайнамаз", "shorts"],
                         "defaultLanguage": lang, "defaultAudioLanguage": audio},
