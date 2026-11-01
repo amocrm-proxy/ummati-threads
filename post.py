@@ -192,7 +192,7 @@ if hour == 20 and not dry and ut_key not in used:                    # уағы�
     except BaseException as e:
         print("Уағыз: TikTok не удалось запустить:", e)
 wa_key = f"wa {slot[:13]}"
-if hour in (9, 12, 15, 20) and not dry and wa_key not in used:           # WhatsApp-канал: готовый пост в Telegram Арсену (он пересылает вручную)
+if False and hour in (9, 12, 15, 20) and not dry and wa_key not in used:   # WhatsApp-канал на паузе (Арсен удалил канал 01/11/2026)           # WhatsApp-канал: готовый пост в Telegram Арсену (он пересылает вручную)
     try:
         try:
             import PIL
@@ -228,6 +228,49 @@ if sci:                                           # 12:00 — «Аят и нау
 elif post:                                          # ручной пост из schedule.json
     cards = [] if post.get("image") else [(post["quote"], post["source"], post.get("explain", ""), "СЛОВА ВСЕВЫШНЕГО")]
     text = post.get("text") or post.get("explain", "")
+elif kk.ON:                                       # Threads (с 01/11/2026): НА РУССКОМ, только текст. Каждый час — следующий аят
+    def thread_parts(body, tail):                 # (перевод Э. Кулиева) + смысл из тафсира ас-Саади ответом; слова не меняем
+        if len(body) + len(tail) + 2 <= 490:
+            return [body + "\n\n" + tail]
+        ps = C.chunks(body, 440)
+        return [f"{x} ({i + 1}/{len(ps)})" + ("\n\n" + tail if i == len(ps) - 1 else "") for i, x in enumerate(ps)]
+    n = int(used.get("thr_next", 1))
+    d = C.get_json(f"https://api.alquran.cloud/v1/ayah/{(n - 1) % 6236 + 1}/ru.kuliev")
+    if not d or d.get("data", {}).get("edition", {}).get("identifier") != "ru.kuliev":
+        sys.exit("Threads: перевод Кулиева не получен — час пропускаю")
+    d = d["data"]; s_, a_ = d["surah"]["number"], d["numberInSurah"]
+    t_ = d["text"].replace(" - ", " — ").strip()
+    chain = thread_parts(f"«{t_}»", f"Коран, сура «{C.NAMES[s_ - 1]}», аят {a_}. Перевод смыслов Э. Кулиева.")
+    taf, th = None, None
+    try:
+        taf = C.tafsir(s_, a_)                    # ас-Саади толкует группами — один и тот же отрывок не повторяем
+    except Exception as e:
+        print("тафсир:", e)
+    if taf:
+        import hashlib
+        th = hashlib.md5(taf[0].encode()).hexdigest()[:10]
+        if th != used.get("thr_taf"):
+            chain += thread_parts(f"Смысл: {taf[0]}", f"{taf[1]}. Перевод Э. Кулиева, сокращено.")
+    print("Threads RU: аят", n, f"{s_}:{a_}", "| частей:", len(chain))
+    if dry:
+        print("\n---\n".join(chain)); sys.exit(0)
+    uid = threads("GET", "me", fields="id")["id"]
+    prev = None
+    for part in chain:
+        q = dict(media_type="TEXT", text=part)
+        if prev:
+            q["reply_to_id"] = prev
+        cid = threads("POST", f"{uid}/threads", **q)["id"]
+        time.sleep(20)
+        prev = threads("POST", f"{uid}/threads_publish", creation_id=cid)["id"]
+        time.sleep(5)
+    used[f"slot {slot}"] = slot
+    used["thr_next"] = n + 1
+    if th:
+        used["thr_taf"] = th
+    put_file("used.json", json.dumps(used, ensure_ascii=False, indent=1).encode(), f"used {slot}")
+    print("Опубликовано", slot)
+    sys.exit(0)
 elif hour % 3 == 0:                               # аят → хадис → слова поддержки по кругу: 0, 3, 6… — аят Корана по порядку
     n = int(used.get("q_next", 1))
     got = C.ayah_cards((n - 1) % C.TOTAL_AYAHS + 1)

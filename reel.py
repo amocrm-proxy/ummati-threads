@@ -32,7 +32,6 @@ def main(path):
         caption += "\n\nЖайнамаздар: @ummati.family"
     else:
         tok = ig.page_token()
-    caption += "\n\nWhatsApp арнамыздың сілтемесі профильде"       # ссылка на WhatsApp-канал
     extra = {}
     cov = path.rsplit(".", 1)[0] + "_cover.jpg"
     if os.path.exists(cov):                       # своя обложка Reels (для сетки профиля)
