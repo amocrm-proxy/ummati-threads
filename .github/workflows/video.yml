@@ -58,7 +58,7 @@ jobs:
         env:
           IG_TOKEN: ${{ secrets.IG_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - if: ${{ !cancelled() && (startsWith(inputs.spec, 'sunna') || startsWith(inputs.spec, 'adab')) }}
+      - if: ${{ false && !cancelled() && (startsWith(inputs.spec, 'sunna') || startsWith(inputs.spec, 'adab')) }}   # отключено 01/11: в Уағыз только ролики устазов
         id: ug
         continue-on-error: true
         run: python reel.py "$(echo $OUT | tr ':' '_').mp4"
@@ -66,7 +66,7 @@ jobs:
           REEL_TARGET: uagyz
           UAGYZ_IG_TOKEN: ${{ secrets.UAGYZ_IG_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - if: ${{ !cancelled() && inputs.threads }}
+      - if: ${{ false && !cancelled() && inputs.threads }}   # отключено 01/11: в Threads только текст
         id: thr
         continue-on-error: true
         run: python threads_video.py "$(echo $OUT | tr ':' '_').mp4"
