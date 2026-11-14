@@ -102,6 +102,29 @@ def category(hour):
 slot = os.environ.get("SLOT") or datetime.datetime.now(ZoneInfo("Asia/Almaty")).strftime("%Y-%m-%dT%H:00")
 dry = slot.startswith("dry:")
 slot = slot[4:] if dry else slot
+if slot == "dedup":                               # SLOT=dedup — удалить дубли в Threads (с 11/11/2026), оставить самый ранний
+    uid = threads("GET", "me", fields="id")["id"]
+    items, url = [], f"{API}/{uid}/threads?" + urllib.parse.urlencode(dict(fields="id,text,timestamp", limit=100, since="2026-11-11", access_token=TOKEN))
+    while url and len(items) < 2000:
+        r = http("GET", url)
+        items += r.get("data", [])
+        url = r.get("paging", {}).get("next")
+    seen, gone, bad = set(), 0, 0
+    for it in sorted(items, key=lambda x: x.get("timestamp", "")):
+        t = (it.get("text") or "").strip()
+        if not t or it.get("timestamp", "") < "2026-11-11":
+            continue
+        if t in seen:
+            ok = http("DELETE", f"{API}/{it['id']}?access_token={TOKEN}", fatal=False)
+            gone += bool(ok); bad += not ok
+            time.sleep(2)
+        seen.add(t)
+    print("Постов проверено:", len(items), "| удалено дублей:", gone, "| не удалось:", bad)
+    u = json.load(open("used.json", encoding="utf-8"))
+    if int(u.get("thr_next", 1)) == 251:          # 2:244 уже висит (оставили один) — дальше идём с 2:245
+        u["thr_next"] = 252
+        put_file("used.json", json.dumps(u, ensure_ascii=False, indent=1).encode(), "dedup: thr_next 252")
+    sys.exit(0)
 ig_only = slot.startswith("ig:")                  # SLOT=ig:2026-10-22T19:30 — только Instagram (перевыложить), без Threads и видео
 slot = slot[3:] if ig_only else slot
 hour = int(slot[11:13])
