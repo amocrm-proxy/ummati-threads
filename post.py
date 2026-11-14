@@ -232,7 +232,7 @@ elif kk.ON:                                       # Threads (с 01/11/2026): Н�
     def thread_parts(body, tail):                 # (перевод Э. Кулиева) + смысл из тафсира ас-Саади ответом; слова не меняем
         if len(body) + len(tail) + 2 <= 490:
             return [body + "\n\n" + tail]
-        ps = C.chunks(body, 440)
+        ps = C.chunks(body, 480 - len(tail) - 10)    # каждая часть вместе с подписью — не длиннее 490 (лимит Threads 500)
         return [f"{x} ({i + 1}/{len(ps)})" + ("\n\n" + tail if i == len(ps) - 1 else "") for i, x in enumerate(ps)]
     n = int(used.get("thr_next", 1))
     d = C.get_json(f"https://api.alquran.cloud/v1/ayah/{(n - 1) % 6236 + 1}/ru.kuliev")
@@ -254,21 +254,29 @@ elif kk.ON:                                       # Threads (с 01/11/2026): Н�
     print("Threads RU: аят", n, f"{s_}:{a_}", "| частей:", len(chain))
     if dry:
         print("\n---\n".join(chain)); sys.exit(0)
+    if used.get(f"slot {slot}"):
+        print("Этот час уже опубликован — повтор не нужен"); sys.exit(0)
     uid = threads("GET", "me", fields="id")["id"]
     prev = None
-    for part in chain:
-        q = dict(media_type="TEXT", text=part)
+    for i, part in enumerate(chain):
+        q = dict(media_type="TEXT", text=part[:495])
         if prev:
             q["reply_to_id"] = prev
-        cid = threads("POST", f"{uid}/threads", **q)["id"]
-        time.sleep(20)
-        prev = threads("POST", f"{uid}/threads_publish", creation_id=cid)["id"]
+        try:
+            cid = threads("POST", f"{uid}/threads", **q)["id"]
+            time.sleep(20)
+            prev = threads("POST", f"{uid}/threads_publish", creation_id=cid)["id"]
+        except SystemExit as e:
+            if i == 0:
+                raise
+            print("ответ не ушёл, аят уже опубликован:", e); break
+        if i == 0:                                # аят вышел — сразу фиксируем, чтобы не было дублей
+            used[f"slot {slot}"] = slot
+            used["thr_next"] = n + 1
+            if th:
+                used["thr_taf"] = th
+            put_file("used.json", json.dumps(used, ensure_ascii=False, indent=1).encode(), f"used {slot}")
         time.sleep(5)
-    used[f"slot {slot}"] = slot
-    used["thr_next"] = n + 1
-    if th:
-        used["thr_taf"] = th
-    put_file("used.json", json.dumps(used, ensure_ascii=False, indent=1).encode(), f"used {slot}")
     print("Опубликовано", slot)
     sys.exit(0)
 elif hour % 3 == 0:                               # аят → хадис → слова поддержки по кругу: 0, 3, 6… — аят Корана по порядку
