@@ -128,7 +128,8 @@ if slot == "dedup":                               # SLOT=dedup — удалит�
 ig_only = slot.startswith("ig:")                  # SLOT=ig:2026-10-22T19:30 — только Instagram (перевыложить), без Threads и видео
 slot = slot[3:] if ig_only else slot
 hour = int(slot[11:13])
-subprocess.run([sys.executable, "ig.py"], env=dict(os.environ, SLOT=("dry:" if dry else "") + slot))
+if False:   # ПАУЗА 20/11/2026: по просьбе Арсена работает только Threads (Instagram Family выключен)
+    subprocess.run([sys.executable, "ig.py"], env=dict(os.environ, SLOT=("dry:" if dry else "") + slot))
 if ig_only:
     sys.exit(0)
 schedule = json.load(open("schedule.json", encoding="utf-8"))
@@ -142,7 +143,8 @@ if False:                                         # Telegram-бот «Размы
         print("Telegram:", e)
 yt_key = f"yt {slot[:13]}"
 VOICE = False                                     # ролики с голосом автора — пока не используем
-if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # Shorts/TikTok 5 раз в день (+ Reels в 12, 18 и 21)
+if False and hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # ПАУЗА 20/11/2026: по просьбе Арсена работает только Threads (YouTube/TikTok/Reels)
+#   # Shorts/TikTok 5 раз в день (+ Reels в 12, 18 и 21)
     try:
         # по кругу аят → хадис → поддержка (сквозной счёт роликов с 15/10/2026), ролик с ковриками — ежедневно в 21:00;
         # аят в 09 и 18 — отрывок Корана по порядку, в остальное время — «Сильный аят»
@@ -185,7 +187,8 @@ if hour in (9, 12, 15, 18, 21) and not dry and yt_key not in used:   # Shorts/Ti
     except BaseException as e:
         print("YouTube Shorts: не удалось запустить:", e)
 ug_key = f"ug {slot[:13]}"
-if hour in (9, 12, 15, 18, 21) and not dry and ug_key not in used:   # уағыз: следующий ролик (Instagram или Telegram) — 5 раз в день; в 18 ещё и на YouTube Ummati
+if False and hour in (9, 12, 15, 18, 21) and not dry and ug_key not in used:   # ПАУЗА 20/11/2026: по просьбе Арсена работает только Threads (Уағыз)
+#   # уағыз: следующий ролик (Instagram или Telegram) — 5 раз в день; в 18 ещё и на YouTube Ummati
     try:
         urllib.request.urlopen(urllib.request.Request(
             f"https://api.github.com/repos/{REPO}/actions/workflows/uagyz.yml/dispatches", method="POST", headers=GH_HDR,
@@ -204,7 +207,8 @@ if not dry and th_key not in used:                                   # раз в
     except BaseException as e:
         print("Threads ключ: продлить не удалось:", e)
 ut_key = f"ut {slot[:13]}"
-if hour == 20 and not dry and ut_key not in used:                    # уағыз: 1 ролик в день в TikTok (отдельно от слотов видео)
+if False and hour == 20 and not dry and ut_key not in used:   # ПАУЗА 20/11/2026: по просьбе Арсена работает только Threads (Уағыз TikTok)
+#                    # уағыз: 1 ролик в день в TikTok (отдельно от слотов видео)
     try:
         urllib.request.urlopen(urllib.request.Request(
             f"https://api.github.com/repos/{REPO}/actions/workflows/uagyz.yml/dispatches", method="POST", headers=GH_HDR,
