@@ -255,30 +255,46 @@ if sci:                                           # 12:00 — «Аят и нау
 elif post:                                          # ручной пост из schedule.json
     cards = [] if post.get("image") else [(post["quote"], post["source"], post.get("explain", ""), "СЛОВА ВСЕВЫШНЕГО")]
     text = post.get("text") or post.get("explain", "")
-elif kk.ON:                                       # Threads (с 01/11/2026): НА РУССКОМ, только текст. Каждый час — следующий аят
-    def thread_parts(body, tail):                 # (перевод Э. Кулиева) + смысл из тафсира ас-Саади ответом; слова не меняем
-        if len(body) + len(tail) + 2 <= 490:
-            return [body + "\n\n" + tail]
-        ps = C.chunks(body, 480 - len(tail) - 10)    # каждая часть вместе с подписью — не длиннее 490 (лимит Threads 500)
-        return [f"{x} ({i + 1}/{len(ps)})" + ("\n\n" + tail if i == len(ps) - 1 else "") for i, x in enumerate(ps)]
-    n = int(used.get("thr_next", 1))
-    d = C.get_json(f"https://api.alquran.cloud/v1/ayah/{(n - 1) % 6236 + 1}/ru.kuliev")
-    if not d or d.get("data", {}).get("edition", {}).get("identifier") != "ru.kuliev":
-        sys.exit("Threads: перевод Кулиева не получен — час пропускаю")
-    d = d["data"]; s_, a_ = d["surah"]["number"], d["numberInSurah"]
-    t_ = d["text"].replace(" - ", " — ").strip()
-    chain = thread_parts(f"«{t_}»", f"Коран, сура «{C.NAMES[s_ - 1]}», аят {a_}. Перевод смыслов Э. Кулиева.")
-    taf, th = None, None
-    try:
-        taf = C.tafsir(s_, a_)                    # ас-Саади толкует группами — один и тот же отрывок не повторяем
-    except Exception as e:
-        print("тафсир:", e)
-    if taf:
-        import hashlib
-        th = hashlib.md5(taf[0].encode()).hexdigest()[:10]
-        if th != used.get("thr_taf"):
-            chain += thread_parts(f"Смысл: {taf[0]}", f"{taf[1]}. Перевод Э. Кулиева, сокращено.")
-    print("Threads RU: аят", n, f"{s_}:{a_}", "| частей:", len(chain))
+elif kk.ON:                                       # Threads (с 01/11/2026): НА РУССКОМ, только текст. Каждый час — следующий аят,
+    def thread_parts(body, tail, head=""):        # а в 09, 15 и 21 (с 26/11/2026) — «Хадис дня» (только аль-Бухари и Муслим); слова не меняем
+        if len(head) + len(body) + len(tail) + 2 <= 490:
+            return [head + body + "\n\n" + tail]
+        ps = C.chunks(body, 480 - len(tail) - len(head) - 10)   # каждая часть с шапкой и подписью — не длиннее 490 (лимит Threads 500)
+        return [(head if i == 0 else "") + f"{x} ({i + 1}/{len(ps)})" + ("\n\n" + tail if i == len(ps) - 1 else "") for i, x in enumerate(ps)]
+    upd, th = {}, None
+    if hour in (9, 15, 21):                       # Хадис дня: Энциклопедия переведённых хадисов, только аль-Бухари/Муслим и только «достоверный»
+        HP = [h for h in C.hadiths() if ("Бухари" in h["attr"] or "Муслим" in h["attr"])
+              and (h["grade"].startswith("Достоверный") or h["grade"].startswith("Обе версии достоверные"))
+              and "в совокупности" not in h["grade"]]
+        k = int(used.get("thr_h", 0))
+        h = HP[k % len(HP)]
+        a = h["attr"]
+        who = "Передали аль-Бухари и Муслим" if ("Бухари" in a and "Муслим" in a) else "Передал аль-Бухари" if "Бухари" in a else "Передал Муслим"
+        body = h["text"].replace("ﷺ", "(да благословит его Аллах и приветствует)").strip()
+        chain = thread_parts(body, f"{who}. Достоверный хадис.", "Хадис дня\n\n")
+        upd["thr_h"] = k + 1
+        print("Threads RU: хадис", k, h["id"], "| частей:", len(chain))
+    else:
+        n = int(used.get("thr_next", 1))
+        d = C.get_json(f"https://api.alquran.cloud/v1/ayah/{(n - 1) % 6236 + 1}/ru.kuliev")
+        if not d or d.get("data", {}).get("edition", {}).get("identifier") != "ru.kuliev":
+            sys.exit("Threads: перевод Кулиева не получен — час пропускаю")
+        d = d["data"]; s_, a_ = d["surah"]["number"], d["numberInSurah"]
+        t_ = d["text"].replace(" - ", " — ").strip()
+        chain = thread_parts(f"«{t_}»", f"Коран, сура «{C.NAMES[s_ - 1]}», аят {a_}. Перевод смыслов Э. Кулиева.", "Аят дня\n\n")
+        taf = None
+        try:
+            taf = C.tafsir(s_, a_)                # ас-Саади толкует группами — один и тот же отрывок не повторяем
+        except Exception as e:
+            print("тафсир:", e)
+        if taf:
+            import hashlib
+            th = hashlib.md5(taf[0].encode()).hexdigest()[:10]
+            if th != used.get("thr_taf"):
+                chain += thread_parts(f"Смысл: {taf[0]}", f"{taf[1]}. Перевод Э. Кулиева, сокращено.")
+            upd["thr_taf"] = th
+        upd["thr_next"] = n + 1
+        print("Threads RU: аят", n, f"{s_}:{a_}", "| частей:", len(chain))
     if dry:
         print("\n---\n".join(chain)); sys.exit(0)
     if used.get(f"slot {slot}"):
@@ -296,12 +312,10 @@ elif kk.ON:                                       # Threads (с 01/11/2026): Н�
         except SystemExit as e:
             if i == 0:
                 raise
-            print("ответ не ушёл, аят уже опубликован:", e); break
-        if i == 0:                                # аят вышел — сразу фиксируем, чтобы не было дублей
+            print("продолжение не ушло, первый пост уже опубликован:", e); break
+        if i == 0:                                # первый пост вышел — сразу фиксируем, чтобы не было дублей
             used[f"slot {slot}"] = slot
-            used["thr_next"] = n + 1
-            if th:
-                used["thr_taf"] = th
+            used.update(upd)
             put_file("used.json", json.dumps(used, ensure_ascii=False, indent=1).encode(), f"used {slot}")
         time.sleep(5)
     print("Опубликовано", slot)
